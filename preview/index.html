@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Saladillo Noticias — El diario de nuestra ciudad</title>
+<meta name="description" content="Portal de noticias de Saladillo, Buenos Aires. Policiales, política, deportes, interés general, agro y clasificados de la ciudad y las localidades del partido." />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: { 50:'#F4F7FB',100:'#E6EDF7',200:'#C4D5EC',300:'#96B2DA',400:'#5E88BE',500:'#3566A4',600:'#234E86',700:'#1A3C69',800:'#122A4D',900:'#0B1C36',950:'#071223' },
+          news: { 50:'#FBFBFD',100:'#F4F5F7',200:'#E8EAEE',300:'#D6D9E0',400:'#9AA0AC',500:'#6B7280',600:'#4B5563',700:'#374151',800:'#1F2937',900:'#111827' },
+          accent: { 500:'#C62828', 600:'#A81E1E' }
+        },
+        fontFamily: {
+          sans: ['system-ui','-apple-system','Segoe UI','Roboto','sans-serif'],
+          editorial: ['Georgia','Times New Roman','serif']
+        },
+        boxShadow: {
+          card: '0 1px 2px rgba(11,28,54,.06), 0 6px 18px -8px rgba(11,28,54,.18)',
+          header: '0 2px 12px rgba(11,28,54,.16)'
+        },
+        maxWidth: { news: '1240px' }
+      }
+    }
+  }
+</script>
+<link rel="stylesheet" href="styles.css" />
+<script>window.imgFail=function(el){el.onerror=null;el.classList.add('img-fallback');el.src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect width='16' height='12' fill='%23E8EAEE'/%3E%3C/svg%3E";};</script>
+</head>
+<body class="bg-news-100 font-sans text-news-800" id="top">
+
+  <!-- ============================ BARRA SUPERIOR ============================ -->
+  <div class="bg-brand-950 text-brand-100">
+    <div class="container-news flex flex-wrap items-center justify-between gap-2 py-1.5 text-xs">
+      <p class="capitalize tracking-wide text-brand-200">viernes, 31 de octubre de 2026</p>
+      <nav aria-label="Enlaces secundarios" class="flex items-center gap-1 sm:gap-3">
+        <a href="#" class="rounded px-2 py-0.5 transition hover:bg-white/10 hover:text-white">Farmacias de turno</a>
+        <span class="text-white/25" aria-hidden="true">|</span>
+        <a href="#" class="rounded px-2 py-0.5 transition hover:bg-white/10 hover:text-white">Clima</a>
+        <span class="text-white/25" aria-hidden="true">|</span>
+        <a href="#" class="rounded px-2 py-0.5 transition hover:bg-white/10 hover:text-white">Contacto</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- ============================== CABECERA =============================== -->
+  <header class="brand-gradient sticky top-0 z-40 shadow-header">
+    <div class="container-news">
+      <!-- logo + buscador -->
+      <div class="flex flex-wrap items-center justify-between gap-4 py-4">
+        <a href="index.html" class="group">
+          <span class="block font-editorial text-3xl font-bold leading-none tracking-tight text-white sm:text-4xl">Saladillo Noticias</span>
+          <span class="kicker mt-1.5 block text-[10px] text-brand-200 sm:text-[11px]">El diario de nuestra ciudad · Buenos Aires · Desde 1932</span>
+        </a>
+        <form class="hidden w-full max-w-xs sm:block" role="search" onsubmit="return false">
+          <label for="buscar" class="sr-only">Buscar en el portal</label>
+          <div class="flex overflow-hidden rounded-md bg-white/10 ring-1 ring-white/20 focus-within:bg-white/15">
+            <input id="buscar" type="search" placeholder="Buscar en Saladillo Noticias…"
+              class="w-full bg-transparent px-3 py-2 text-sm text-white placeholder:text-brand-200 outline-none" />
+            <button type="submit" aria-label="Buscar" class="px-3 text-brand-100 hover:bg-white/10">🔍</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- navegación principal -->
+      <nav aria-label="Secciones" class="border-t border-white/10">
+        <ul class="flex items-center gap-1 overflow-x-auto text-sm no-scrollbar">
+          <li><a href="index.html" class="block whitespace-nowrap border-b-2 border-white px-3 py-2.5 font-semibold text-white">Inicio</a></li>
+          <li><a href="#policiales" class="block whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-brand-100 transition hover:border-white/50 hover:text-white">Policiales</a></li>
+          <li><a href="#politica" class="block whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-brand-100 transition hover:border-white/50 hover:text-white">Política</a></li>
+          <li><a href="#deportes" class="block whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-brand-100 transition hover:border-white/50 hover:text-white">Deportes</a></li>
+          <li><a href="#interes-general" class="block whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-brand-100 transition hover:border-white/50 hover:text-white">Interés General</a></li>
+          <li><a href="#clasificados" class="block whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-brand-100 transition hover:border-white/50 hover:text-white">Clasificados</a></li>
+          <li><a href="#" class="block whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-brand-100 transition hover:border-white/50 hover:text-white">Agro</a></li>
+        </ul>
+      </nav>
+
+      <!-- franja de widgets -->
+      <div class="grid gap-3 pb-4 pt-3 sm:grid-cols-2">
+        <!-- clima -->
+        <div class="flex items-center gap-4 rounded-lg border border-white/20 bg-white/10 p-3 text-white backdrop-blur">
+          <span class="text-3xl leading-none" aria-hidden="true">☀️</span>
+          <div class="min-w-0">
+            <p class="flex items-baseline gap-2 font-semibold">
+              <span class="text-sm text-brand-100">Saladillo</span>
+              <span class="text-xl">21°C</span>
+            </p>
+            <p class="truncate text-xs text-brand-200">Parcialmente nublado · Sensación 20° · Humedad 68% · Viento 14 km/h NE · Máx 24° / Mín 12°</p>
+          </div>
+        </div>
+        <!-- farmacias de turno -->
+        <div class="flex items-center gap-4 rounded-lg border border-white/20 bg-white/10 p-3 text-white backdrop-blur">
+          <span class="text-2xl leading-none" aria-hidden="true">💊</span>
+          <div class="min-w-0 flex-1">
+            <p class="kicker text-[10px] text-brand-200">Farmacias de turno · hoy</p>
+            <p class="truncate text-sm font-semibold">Farmacia Del Pueblo — Av. San Martín 2345 — 2344-451234</p>
+          </div>
+          <a href="#" class="shrink-0 rounded border border-white/25 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/15">Ver todas</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================== ÚLTIMO MOMENTO ============================ -->
+  <div class="ticker-bar bg-accent-500 text-white">
+    <div class="container-news flex items-center gap-3 py-2">
+      <span class="kicker shrink-0 rounded bg-white/15 px-2 py-1 text-[10px]">🔴 Último momento</span>
+      <div class="ticker flex-1">
+        <div class="ticker-track text-sm">
+          <span class="inline-flex items-center">
+            <a href="nota.html" class="hover:underline">Operativo de alcoholemia en la Ruta 205: 19 actas y seis licencias retenidas</a><span class="mx-4 text-white/50">•</span>
+            <a href="#" class="hover:underline">El Concejo aprobó el presupuesto 2027 con foco en agua potable</a><span class="mx-4 text-white/50">•</span>
+            <a href="#" class="hover:underline">Alumni le ganó el clásico a Del Carril 2 a 1 en el último minuto</a><span class="mx-4 text-white/50">•</span>
+            <a href="#" class="hover:underline">Detuvieron a dos personas por robos en comercios del centro</a><span class="mx-4 text-white/50">•</span>
+            <a href="#" class="hover:underline">Corte de energía programado en Del Carril para el martes</a><span class="mx-4 text-white/50">•</span>
+          </span>
+          <span class="inline-flex items-center" aria-hidden="true">
+            <a href="nota.html" class="hover:underline">Operativo de alcoholemia en la Ruta 205: 19 actas y seis licencias retenidas</a><span class="mx-4 text-white/50">•</span>
+            <a href="#" class="hover:underline">El Concejo aprobó el presupuesto 2027 con foco en agua potable</a><span class="mx-4 text-white/50">•</span>
+            <a href="#" class="hover:underline">Alumni le ganó el clásico a Del Carril 2 a 1 en el último minuto</a><span class="mx-4 text-white/50">•</span>
+            <a href="#" class="hover:underline">Detuvieron a dos personas por robos en comercios del centro</a><span class="mx-4 text-white/50">•</span>
+            <a href="#" class="hover:underline">Corte de energía programado en Del Carril para el martes</a><span class="mx-4 text-white/50">•</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="container-news py-6 lg:py-8">
+
+    <!-- ================================ HERO ================================ -->
+    <section aria-label="Nota principal" class="grid gap-5 lg:grid-cols-3">
+      <!-- nota principal -->
+      <article class="news-card lg:col-span-2">
+        <a href="nota.html" class="group relative block aspect-[16/9] overflow-hidden bg-news-200">
+          <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=nighttime%20police%20checkpoint%20on%20a%20provincial%20highway%20in%20Argentina%2C%20patrol%20car%20with%20blue%20lights%2C%20traffic%20cones%20on%20asphalt%2C%20documentary%20photojournalism%2C%20dramatic%20night%20lighting&image_size=landscape_16_9"
+               alt="Control policial nocturno sobre la Ruta 205 en el acceso norte a Saladillo"
+               onerror="imgFail(this)"
+               class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+          <span class="absolute left-3 top-3 badge bg-accent-500 text-white shadow">Último momento</span>
+        </a>
+        <div class="flex flex-1 flex-col gap-2.5 p-5">
+          <span class="kicker text-accent-500">Policiales</span>
+          <h1 class="headline-xl">
+            <a href="nota.html" class="transition hover:text-brand-700">Saladillo puso en marcha el operativo de prevención vial en la Ruta 205</a>
+          </h1>
+          <p class="text-[15px] leading-relaxed text-news-500">La Municipalidad junto a la Policía Comunal desplegó controles de alcoholemia y documentación sobre el acceso norte. El operativo se repetirá todos los fines de semana largos.</p>
+          <div class="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-news-100 pt-3 text-xs text-news-400">
+            <span>Hace 1 h · 3 min de lectura · 142 vistas</span>
+            <button class="btn-listen" data-speak="Saladillo puso en marcha el operativo de prevención vial en la Ruta 205. La Municipalidad junto a la Policía Comunal desplegó controles de alcoholemia y documentación sobre el acceso norte.">🔊 Escuchar</button>
+          </div>
+        </div>
+      </article>
+
+      <!-- dos notas secundarias -->
+      <div class="flex flex-col gap-5">
+        <article class="news-card">
+          <a href="#" class="group aspect-[16/9] overflow-hidden bg-news-200">
+            <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=city%20council%20session%20in%20an%20Argentine%20town%20hall%2C%20councilors%20seated%20at%20wooden%20desks%2C%20national%20flag%20in%20background%2C%20serious%20documentary%20photography%2C%20natural%20light&image_size=landscape_4_3"
+                 alt="Sesión del Concejo Deliberante de Saladillo" onerror="imgFail(this)"
+                 class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+          </a>
+          <div class="news-card-body">
+            <span class="kicker text-brand-600">Política</span>
+            <h2 class="headline-md"><a href="#" class="hover:text-brand-700">El Concejo Deliberante aprobó el presupuesto 2027 con foco en obras de agua potable</a></h2>
+            <p class="text-xs text-news-400">Hace 5 h · 4 min de lectura</p>
+          </div>
+        </article>
+        <article class="news-card">
+          <a href="#" class="group aspect-[16/9] overflow-hidden bg-news-200">
+            <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=amateur%20soccer%20match%20in%20an%20Argentine%20municipal%20stadium%20at%20sunset%2C%20players%20fighting%20for%20the%20ball%2C%20popular%20stand%20with%20flags%2C%20realistic%20sports%20photography&image_size=landscape_4_3"
+                 alt="Partido de fútbol amateur en el estadio municipal" onerror="imgFail(this)"
+                 class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+          </a>
+          <div class="news-card-body">
+            <span class="kicker text-emerald-700">Deportes</span>
+            <h2 class="headline-md"><a href="#" class="hover:text-brand-700">Alumni le ganó a Del Carril en un clásico que se definió en el último minuto</a></h2>
+            <p class="text-xs text-news-400">Hace 9 h · 3 min de lectura</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- lista de 5 títulos -->
+    <section aria-label="Más títulos" class="mt-5 rounded-lg border border-news-200 bg-white p-5">
+      <ul class="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+        <li class="flex gap-3"><span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand-600" aria-hidden="true"></span><a href="#" class="headline-sm hover:text-brand-700">Detuvieron a dos personas por una serie de robos en comercios del centro</a></li>
+        <li class="flex gap-3"><span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand-600" aria-hidden="true"></span><a href="#" class="headline-sm hover:text-brand-700">La Sociedad Rural confirmó la fecha de la 89ª Exposición de Ganadería</a></li>
+        <li class="flex gap-3"><span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand-600" aria-hidden="true"></span><a href="#" class="headline-sm hover:text-brand-700">El Hospital Zonal incorporó un nuevo tomógrafo y amplía imágenes</a></li>
+        <li class="flex gap-3"><span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand-600" aria-hidden="true"></span><a href="#" class="headline-sm hover:text-brand-700">Corte de energía programado en Del Carril: cuadras y horarios</a></li>
+        <li class="flex gap-3"><span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand-600" aria-hidden="true"></span><a href="#" class="headline-sm hover:text-brand-700">Bomberos Voluntarios suman un nuevo móvil para incendios forestales</a></li>
+        <li class="flex gap-3"><span class="mt-2 h-2 w-2 shrink-0 rounded-full bg-brand-600" aria-hidden="true"></span><a href="#" class="headline-sm hover:text-brand-700">Polvaredas tendrá su primera feria de emprendedores el domingo</a></li>
+      </ul>
+    </section>
+
+    <!-- franja de banner publicitario (HOME_TOP) -->
+    <section aria-label="Publicidad" class="mt-6">
+      <div class="rounded-lg border-2 border-dashed border-news-300 bg-news-50 p-3">
+        <p class="kicker mb-2 text-[10px] text-news-400">Publicidad</p>
+        <a href="#" class="block overflow-hidden rounded-md">
+          <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=horizontal%20advertising%20banner%20for%20an%20Argentine%20artisan%20bakery%2C%20breads%20and%20pastries%20on%20a%20wooden%20table%2C%20warm%20tones%2C%20clean%20design%20with%20space%20for%20text%2C%20commercial%20style&image_size=landscape_16_9"
+               alt="Banner publicitario de Panadería La Espiga" onerror="imgFail(this)"
+               class="h-28 w-full object-cover sm:h-36" />
+        </a>
+        <p class="mt-2 text-center text-xs text-news-400">Panadería La Espiga — Publicidad local · Av. Belgrano 1450, Saladillo</p>
+      </div>
+    </section>
+
+    <!-- ===================== ÚLTIMAS NOTICIAS + SIDEBAR ===================== -->
+    <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+
+      <div class="min-w-0">
+        <!-- últimas noticias -->
+        <section aria-labelledby="ultimas">
+          <div class="section-head">
+            <h2 id="ultimas">Últimas noticias</h2>
+            <a href="#" class="text-sm font-semibold text-brand-600 hover:text-brand-800">Ver todas →</a>
+          </div>
+          <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+
+            <article class="news-card">
+              <a href="#" class="group aspect-[4/3] overflow-hidden bg-news-200">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=outdoor%20artisan%20market%20in%20a%20small%20Argentine%20town%20square%2C%20colorful%20canopy%20stalls%2C%20handmade%20crafts%20and%20regional%20food%2C%20families%20strolling%2C%20warm%20daytime%20photography&image_size=landscape_4_3"
+                     alt="Feria de emprendedores en la plaza de Polvaredas" onerror="imgFail(this)"
+                     class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+              </a>
+              <div class="news-card-body">
+                <span class="kicker text-brand-600">Interés General</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">Polvaredas tendrá su primera feria de emprendedores el próximo domingo</a></h3>
+                <p class="line-clamp-3 text-sm text-news-500">Más de 40 productores locales de Polvaredas, Cazón y Saladillo participarán de la feria en la plaza central.</p>
+                <div class="mt-auto flex items-center justify-between gap-2 border-t border-news-100 pt-3 text-xs text-news-400">
+                  <span>Hace 14 h · 3 min</span>
+                  <button class="btn-listen" data-speak="Polvaredas tendrá su primera feria de emprendedores el próximo domingo. Más de 40 productores locales de Polvaredas, Cazón y Saladillo participarán de la feria en la plaza central.">🔊 Escuchar</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="news-card">
+              <a href="#" class="group aspect-[4/3] overflow-hidden bg-news-200">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Argentine%20police%20station%20in%20a%20medium-sized%20city%2C%20patrol%20car%20parked%20at%20the%20entrance%2C%20documentary%20photojournalism%2C%20daylight&image_size=landscape_4_3"
+                     alt="Comisaría de Saladillo" onerror="imgFail(this)"
+                     class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+              </a>
+              <div class="news-card-body">
+                <span class="kicker text-accent-500">Policiales</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">Detuvieron a dos personas por una serie de robos en comercios del centro</a></h3>
+                <p class="line-clamp-3 text-sm text-news-500">La investigación se extendió durante tres semanas y permitió recuperar mercadería por más de cuatro millones de pesos.</p>
+                <div class="mt-auto flex items-center justify-between gap-2 border-t border-news-100 pt-3 text-xs text-news-400">
+                  <span>Hace 20 h · 4 min</span>
+                  <button class="btn-listen" data-speak="Detuvieron a dos personas por una serie de robos en comercios del centro de Saladillo. La investigación se extendió durante tres semanas.">🔊 Escuchar</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="news-card">
+              <a href="#" class="group aspect-[4/3] overflow-hidden bg-news-200">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=rural%20agricultural%20show%20in%20Argentina%2C%20pedigree%20cattle%20in%20the%20judging%20ring%2C%20handlers%20in%20vests%2C%20audience%20watching%2C%20documentary%20farm%20photography%2C%20natural%20light&image_size=landscape_4_3"
+                     alt="Exposición de ganadería en la Sociedad Rural de Saladillo" onerror="imgFail(this)"
+                     class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+              </a>
+              <div class="news-card-body">
+                <span class="kicker text-lime-700">Agro</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">La Sociedad Rural confirmó la fecha de la 89ª Exposición de Ganadería</a></h3>
+                <p class="line-clamp-3 text-sm text-news-500">El tradicional evento contará con juras de reproductores, remate de hacienda y un pabellón de agroindustria.</p>
+                <div class="mt-auto flex items-center justify-between gap-2 border-t border-news-100 pt-3 text-xs text-news-400">
+                  <span>Hace 1 día · 5 min</span>
+                  <button class="btn-listen" data-speak="La Sociedad Rural de Saladillo confirmó la fecha de la 89ª Exposición de Ganadería, Agricultura e Industria.">🔊 Escuchar</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="news-card">
+              <a href="#" class="group aspect-[4/3] overflow-hidden bg-news-200">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=electric%20cooperative%20workers%20repairing%20a%20medium%20voltage%20pole%20in%20an%20Argentine%20town%2C%20crane%20truck%2C%20power%20lines%2C%20documentary%20photography%2C%20daylight&image_size=landscape_4_3"
+                     alt="Operarios de la cooperativa eléctrica trabajando en un poste" onerror="imgFail(this)"
+                     class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+              </a>
+              <div class="news-card-body">
+                <span class="kicker text-brand-600">Interés General</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">Corte de energía programado en Del Carril: cuadras y horarios afectados</a></h3>
+                <p class="line-clamp-3 text-sm text-news-500">La Cooperativa Eléctrica informó un corte programado para el martes por tareas de mantenimiento.</p>
+                <div class="mt-auto flex items-center justify-between gap-2 border-t border-news-100 pt-3 text-xs text-news-400">
+                  <span>Hace 1 día · 2 min</span>
+                  <button class="btn-listen" data-speak="Corte de energía programado en Del Carril. La Cooperativa Eléctrica informó un corte programado para el martes por tareas de mantenimiento.">🔊 Escuchar</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="news-card">
+              <a href="#" class="group aspect-[4/3] overflow-hidden bg-news-200">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=medical%20imaging%20room%20in%20an%20Argentine%20public%20hospital%20with%20a%20modern%20CT%20scanner%2C%20health%20professionals%20in%20white%20coats%2C%20clean%20institutional%20photography&image_size=landscape_4_3"
+                     alt="Sala de diagnóstico por imágenes del Hospital Zonal" onerror="imgFail(this)"
+                     class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+              </a>
+              <div class="news-card-body">
+                <span class="kicker text-brand-600">Interés General</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">El Hospital Zonal incorporó un nuevo tomógrafo y amplía el servicio de imágenes</a></h3>
+                <p class="line-clamp-3 text-sm text-news-500">El equipamiento permitirá reducir los traslados a otras ciudades. La puesta en funcionamiento está prevista para la próxima semana.</p>
+                <div class="mt-auto flex items-center justify-between gap-2 border-t border-news-100 pt-3 text-xs text-news-400">
+                  <span>Hace 2 días · 3 min</span>
+                  <button class="btn-listen" data-speak="El Hospital Zonal incorporó un nuevo tomógrafo y amplía el servicio de imágenes.">🔊 Escuchar</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="news-card">
+              <a href="#" class="group aspect-[4/3] overflow-hidden bg-news-200">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Argentine%20volunteer%20firefighter%20truck%20with%20siren%20and%20lights%2C%20small%20town%20fire%20station%2C%20firefighters%20in%20firefighting%20gear%2C%20realistic%20institutional%20photography&image_size=landscape_4_3"
+                     alt="Nuevo móvil de Bomberos Voluntarios de Saladillo" onerror="imgFail(this)"
+                     class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+              </a>
+              <div class="news-card-body">
+                <span class="kicker text-brand-600">Interés General</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">Bomberos Voluntarios de Saladillo suman un nuevo móvil para incendios forestales</a></h3>
+                <p class="line-clamp-3 text-sm text-news-500">El vehículo fue adquirido con fondos de una colecta comunitaria y aportes de empresas locales.</p>
+                <div class="mt-auto flex items-center justify-between gap-2 border-t border-news-100 pt-3 text-xs text-news-400">
+                  <span>Hace 2 días · 3 min</span>
+                  <button class="btn-listen" data-speak="Bomberos Voluntarios de Saladillo suman un nuevo móvil para incendios forestales.">🔊 Escuchar</button>
+                </div>
+              </div>
+            </article>
+
+          </div>
+        </section>
+
+        <!-- ===================== FRANJAS POR CATEGORÍA ===================== -->
+        <section id="policiales" class="mt-10" aria-labelledby="cat-policiales">
+          <div class="section-head">
+            <h2 id="cat-policiales" class="!border-0">Policiales</h2>
+            <a href="#" class="text-sm font-semibold text-brand-600 hover:text-brand-800">Ver todas →</a>
+          </div>
+          <div class="strip-grid">
+
+            <article class="news-card news-card-h">
+              <a href="nota.html" class="group w-28 shrink-0 overflow-hidden bg-news-200 sm:w-36">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=nighttime%20police%20checkpoint%20on%20a%20provincial%20highway%20in%20Argentina%2C%20patrol%20car%20with%20blue%20lights%2C%20traffic%20cones%20on%20asphalt%2C%20documentary%20photojournalism%2C%20dramatic%20night%20lighting&image_size=landscape_4_3"
+                     alt="Operativo vial en la Ruta 205" onerror="imgFail(this)" class="h-full w-full object-cover" />
+              </a>
+              <div class="flex flex-1 flex-col gap-1.5 p-3">
+                <span class="kicker text-accent-500">Policiales</span>
+                <h3 class="headline-sm"><a href="nota.html" class="hover:text-brand-700">Saladillo puso en marcha el operativo de prevención vial en la Ruta 205</a></h3>
+                <p class="text-xs text-news-400">Hace 1 h · 3 min</p>
+              </div>
+            </article>
+
+            <article class="news-card news-card-h">
+              <a href="#" class="group w-28 shrink-0 overflow-hidden bg-news-200 sm:w-36">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Argentine%20police%20station%20in%20a%20medium-sized%20city%2C%20patrol%20car%20parked%20at%20the%20entrance%2C%20documentary%20photojournalism%2C%20daylight&image_size=landscape_4_3"
+                     alt="Comisaría de Saladillo" onerror="imgFail(this)" class="h-full w-full object-cover" />
+              </a>
+              <div class="flex flex-1 flex-col gap-1.5 p-3">
+                <span class="kicker text-accent-500">Policiales</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">Detuvieron a dos personas por robos en comercios del centro</a></h3>
+                <p class="text-xs text-news-400">Hace 20 h · 4 min</p>
+              </div>
+            </article>
+
+            <article class="news-card news-card-h">
+              <a href="#" class="group w-28 shrink-0 overflow-hidden bg-news-200 sm:w-36">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Argentine%20highway%20with%20an%20overturned%20cargo%20truck%20on%20the%20shoulder%2C%20patrol%20car%20and%20firefighters%20assisting%2C%20rural%20pampas%20landscape%2C%20realistic%20photojournalism%2C%20daylight&image_size=landscape_4_3"
+                     alt="Camión volcado en la Ruta 51" onerror="imgFail(this)" class="h-full w-full object-cover" />
+              </a>
+              <div class="flex flex-1 flex-col gap-1.5 p-3">
+                <span class="kicker text-accent-500">Policiales</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">Un camión de carga volcó en la Ruta 51 sin heridos de gravedad</a></h3>
+                <p class="text-xs text-news-400">Hace 3 días · 3 min</p>
+              </div>
+            </article>
+
+          </div>
+        </section>
+
+        <section id="politica" class="mt-10" aria-labelledby="cat-politica">
+          <div class="section-head">
+            <h2 id="cat-politica">Política</h2>
+            <a href="#" class="text-sm font-semibold text-brand-600 hover:text-brand-800">Ver todas →</a>
+          </div>
+          <div class="strip-grid">
+            <article class="news-card news-card-h">
+              <a href="#" class="group w-28 shrink-0 overflow-hidden bg-news-200 sm:w-36">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=city%20council%20session%20in%20an%20Argentine%20town%20hall%2C%20councilors%20seated%20at%20wooden%20desks%2C%20national%20flag%20in%20background%2C%20serious%20documentary%20photography%2C%20natural%20light&image_size=landscape_4_3"
+                     alt="Sesión del Concejo Deliberante" onerror="imgFail(this)" class="h-full w-full object-cover" />
+              </a>
+              <div class="flex flex-1 flex-col gap-1.5 p-3">
+                <span class="kicker text-brand-600">Política</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">El Concejo deliberante aprobó el presupuesto 2027 con foco en obras de agua potable</a></h3>
+                <p class="text-xs text-news-400">Hace 5 h · 4 min</p>
+              </div>
+            </article>
+            <article class="news-card news-card-h">
+              <a href="#" class="group w-28 shrink-0 overflow-hidden bg-news-200 sm:w-36">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=deteriorated%20dirt%20access%20road%20in%20a%20rural%20Argentine%20village%2C%20potholes%20and%20truck%20tracks%2C%20countryside%20and%20houses%20in%20the%20background%2C%20documentary%20photography%2C%20overcast%20day&image_size=landscape_4_3"
+                     alt="Camino de acceso deteriorado en Cazón" onerror="imgFail(this)" class="h-full w-full object-cover" />
+              </a>
+              <div class="flex flex-1 flex-col gap-1.5 p-3">
+                <span class="kicker text-brand-600">Política</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">Vecinos de Cazón reclaman la repavimentación del acceso principal</a></h3>
+                <p class="text-xs text-news-400">Hace 2 días · 3 min</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="deportes" class="mt-10" aria-labelledby="cat-deportes">
+          <div class="section-head">
+            <h2 id="cat-deportes">Deportes</h2>
+            <a href="#" class="text-sm font-semibold text-brand-600 hover:text-brand-800">Ver todas →</a>
+          </div>
+          <div class="strip-grid">
+            <article class="news-card news-card-h sm:col-span-2">
+              <a href="#" class="group w-40 shrink-0 overflow-hidden bg-news-200 sm:w-64">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=amateur%20soccer%20match%20in%20an%20Argentine%20municipal%20stadium%20at%20sunset%2C%20players%20fighting%20for%20the%20ball%2C%20popular%20stand%20with%20flags%2C%20realistic%20sports%20photography&image_size=landscape_4_3"
+                     alt="Partido de fútbol amateur en el estadio municipal" onerror="imgFail(this)" class="h-full w-full object-cover" />
+              </a>
+              <div class="flex flex-1 flex-col gap-2 p-4">
+                <span class="kicker text-emerald-700">Deportes</span>
+                <h3 class="headline-md"><a href="#" class="hover:text-brand-700">Alumni le ganó a Del Carril en un clásico que se definió en el último minuto</a></h3>
+                <p class="line-clamp-2 text-sm text-news-500">El equipo de Saladillo se impuso 2 a 1 en el estadio municipal, ante más de 1.500 personas.</p>
+                <p class="mt-auto text-xs text-news-400">Hace 9 h · 3 min de lectura</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="interes-general" class="mt-10" aria-labelledby="cat-ig">
+          <div class="section-head">
+            <h2 id="cat-ig">Interés General</h2>
+            <a href="#" class="text-sm font-semibold text-brand-600 hover:text-brand-800">Ver todas →</a>
+          </div>
+          <div class="strip-grid">
+            <article class="news-card news-card-h">
+              <a href="#" class="group w-28 shrink-0 overflow-hidden bg-news-200 sm:w-36">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=outdoor%20artisan%20market%20in%20a%20small%20Argentine%20town%20square%2C%20colorful%20canopy%20stalls%2C%20handmade%20crafts%20and%20regional%20food%2C%20families%20strolling%2C%20warm%20daytime%20photography&image_size=landscape_4_3"
+                     alt="Feria de emprendedores" onerror="imgFail(this)" class="h-full w-full object-cover" />
+              </a>
+              <div class="flex flex-1 flex-col gap-1.5 p-3">
+                <span class="kicker text-brand-600">Interés General</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">Polvaredas tendrá su primera feria de emprendedores el próximo domingo</a></h3>
+                <p class="text-xs text-news-400">Hace 14 h · 3 min</p>
+              </div>
+            </article>
+            <article class="news-card news-card-h">
+              <a href="#" class="group w-28 shrink-0 overflow-hidden bg-news-200 sm:w-36">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=medical%20imaging%20room%20in%20an%20Argentine%20public%20hospital%20with%20a%20modern%20CT%20scanner%2C%20health%20professionals%20in%20white%20coats%2C%20clean%20institutional%20photography&image_size=landscape_4_3"
+                     alt="Tomógrafo en el Hospital Zonal" onerror="imgFail(this)" class="h-full w-full object-cover" />
+              </a>
+              <div class="flex flex-1 flex-col gap-1.5 p-3">
+                <span class="kicker text-brand-600">Interés General</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">El Hospital Zonal incorporó un nuevo tomógrafo y amplía imágenes</a></h3>
+                <p class="text-xs text-news-400">Hace 2 días · 3 min</p>
+              </div>
+            </article>
+            <article class="news-card news-card-h">
+              <a href="#" class="group w-28 shrink-0 overflow-hidden bg-news-200 sm:w-36">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Argentine%20volunteer%20firefighter%20truck%20with%20siren%20and%20lights%2C%20small%20town%20fire%20station%2C%20firefighters%20in%20firefighting%20gear%2C%20realistic%20institutional%20photography&image_size=landscape_4_3"
+                     alt="Nuevo móvil de Bomberos Voluntarios" onerror="imgFail(this)" class="h-full w-full object-cover" />
+              </a>
+              <div class="flex flex-1 flex-col gap-1.5 p-3">
+                <span class="kicker text-brand-600">Interés General</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">Bomberos Voluntarios suman un nuevo móvil para incendios forestales</a></h3>
+                <p class="text-xs text-news-400">Hace 2 días · 3 min</p>
+              </div>
+            </article>
+            <article class="news-card news-card-h">
+              <a href="#" class="group w-28 shrink-0 overflow-hidden bg-news-200 sm:w-36">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=small%20cinema%20room%20in%20an%20Argentine%20cultural%20center%2C%20red%20seats%2C%20illuminated%20screen%20and%20diverse%20audience%2C%20warm%20community%20atmosphere%2C%20realistic%20photography&image_size=landscape_4_3"
+                     alt="Ciclo de cine argentino en el Centro Cultural" onerror="imgFail(this)" class="h-full w-full object-cover" />
+              </a>
+              <div class="flex flex-1 flex-col gap-1.5 p-3">
+                <span class="kicker text-brand-600">Interés General</span>
+                <h3 class="headline-sm"><a href="#" class="hover:text-brand-700">Comenzó el ciclo de cine argentino en el Centro Cultural de Saladillo</a></h3>
+                <p class="text-xs text-news-400">Hace 3 días · 2 min</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- ==================== BLOQUE CLASIFICADOS ==================== -->
+        <section id="clasificados" class="mt-10" aria-labelledby="cat-clasificados">
+          <div class="section-head">
+            <h2 id="cat-clasificados">Clasificados de la comunidad</h2>
+            <a href="#" class="text-sm font-semibold text-brand-600 hover:text-brand-800">Publicar un aviso →</a>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <article class="rounded-lg border border-news-200 bg-white p-4 shadow-card">
+              <span class="badge badge-blue">Empleos</span>
+              <h3 class="headline-sm mt-2">Se busca oficial de albañilería con experiencia</h3>
+              <p class="mt-1 line-clamp-2 text-sm text-news-500">Empresa constructora de Saladillo busca oficial de albañilería con experiencia mínima de 3 años. Se ofrece obra social y presentismo.</p>
+              <div class="mt-3 flex items-center justify-between border-t border-news-100 pt-3">
+                <span class="text-xs text-news-400">Saladillo · Constructora del Centro</span>
+                <a href="#" class="btn btn-secondary btn-sm" aria-label="Contactar por WhatsApp">💬 WhatsApp</a>
+              </div>
+            </article>
+            <article class="rounded-lg border border-news-200 bg-white p-4 shadow-card">
+              <span class="badge badge-blue">Inmuebles</span>
+              <h3 class="headline-sm mt-2">Alquilo casa 3 dormitorios en Del Carril</h3>
+              <p class="mt-1 line-clamp-2 text-sm text-news-500">Casa de 3 dormitorios, living comedor, cocina equipada, patio con parrilla y cochera. A cuatro cuadras de la plaza.</p>
+              <div class="mt-3 flex items-center justify-between border-t border-news-100 pt-3">
+                <span class="font-semibold text-brand-700">$ 380.000 / mes · Del Carril</span>
+                <a href="#" class="btn btn-secondary btn-sm" aria-label="Contactar por WhatsApp">💬 WhatsApp</a>
+              </div>
+            </article>
+            <article class="rounded-lg border border-news-200 bg-white p-4 shadow-card">
+              <span class="badge badge-blue">Vehículos</span>
+              <h3 class="headline-sm mt-2">Vendo Fiat Cronos 2021 con 42.000 km</h3>
+              <p class="mt-1 line-clamp-2 text-sm text-news-500">Fiat Cronos Drive 1.3, 2021, único dueño, service oficial al día, cubiertas nuevas, aire acondicionado.</p>
+              <div class="mt-3 flex items-center justify-between border-t border-news-100 pt-3">
+                <span class="font-semibold text-brand-700">$ 16.500.000 · Saladillo</span>
+                <a href="#" class="btn btn-secondary btn-sm" aria-label="Contactar por WhatsApp">💬 WhatsApp</a>
+              </div>
+            </article>
+            <article class="rounded-lg border border-news-200 bg-white p-4 shadow-card">
+              <span class="badge badge-blue">Servicios</span>
+              <h3 class="headline-sm mt-2">Clases particulares de matemática y física</h3>
+              <p class="mt-1 line-clamp-2 text-sm text-news-500">Profesor con 10 años de experiencia ofrece apoyo para nivel secundario y preuniversitario. Presencial o virtual.</p>
+              <div class="mt-3 flex items-center justify-between border-t border-news-100 pt-3">
+                <span class="font-semibold text-brand-700">$ 8.000 / hora · Saladillo</span>
+                <a href="#" class="btn btn-secondary btn-sm" aria-label="Contactar por WhatsApp">💬 WhatsApp</a>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+
+      <!-- ============================= SIDEBAR ============================= -->
+      <aside class="flex flex-col gap-6" aria-label="Contenido complementario">
+
+        <!-- lo más leído -->
+        <section class="rounded-lg border border-news-200 bg-white p-5 shadow-card" aria-labelledby="masleido">
+          <h2 id="masleido" class="mb-4 border-b-2 border-brand-800 pb-2 font-editorial text-lg font-bold text-brand-900">Lo más leído</h2>
+          <ol class="flex flex-col gap-4">
+            <li class="flex gap-3"><span class="rank-num" aria-hidden="true">1</span><a href="nota.html" class="headline-sm hover:text-brand-700">Operativo de prevención vial en la Ruta 205: 212 vehículos fiscalizados</a></li>
+            <li class="flex gap-3"><span class="rank-num" aria-hidden="true">2</span><a href="#" class="headline-sm hover:text-brand-700">El Concejo aprobó el presupuesto 2027: los ejes de la ordenanza</a></li>
+            <li class="flex gap-3"><span class="rank-num" aria-hidden="true">3</span><a href="#" class="headline-sm hover:text-brand-700">Alumni ganó el clásico a Del Carril en el último minuto</a></li>
+            <li class="flex gap-3"><span class="rank-num" aria-hidden="true">4</span><a href="#" class="headline-sm hover:text-brand-700">Detuvieron a dos personas por robos en comercios del centro</a></li>
+            <li class="flex gap-3"><span class="rank-num" aria-hidden="true">5</span><a href="#" class="headline-sm hover:text-brand-700">El Hospital Zonal sumó un tomógrafo y reduce derivaciones</a></li>
+          </ol>
+        </section>
+
+        <!-- farmacias de turno -->
+        <section class="rounded-lg border border-news-200 bg-white p-5 shadow-card" aria-labelledby="farmacias">
+          <h2 id="farmacias" class="mb-3 border-b-2 border-brand-800 pb-2 font-editorial text-lg font-bold text-brand-900">Farmacias de turno</h2>
+          <p class="kicker mb-3 text-[10px] text-news-400">Hoy, viernes 31 de octubre</p>
+          <ul class="flex flex-col divide-y divide-news-100 text-sm">
+            <li class="flex items-start gap-3 py-2.5">
+              <span class="text-lg" aria-hidden="true">💊</span>
+              <div>
+                <p class="font-semibold text-news-800">Farmacia Del Pueblo</p>
+                <p class="text-xs text-news-500">Av. San Martín 2345, Saladillo · 2344-451234</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3 py-2.5">
+              <span class="text-lg" aria-hidden="true">💊</span>
+              <div>
+                <p class="font-semibold text-news-800">Farmacia Central</p>
+                <p class="text-xs text-news-500">Belgrano 1120, Saladillo · 2344-452345</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3 py-2.5">
+              <span class="text-lg" aria-hidden="true">💊</span>
+              <div>
+                <p class="font-semibold text-news-800">Farmacia Del Carril</p>
+                <p class="text-xs text-news-500">Sarmiento 145, Del Carril · 2344-454567</p>
+              </div>
+            </li>
+          </ul>
+          <a href="#" class="mt-3 block text-center text-sm font-semibold text-brand-600 hover:text-brand-800">Ver todas las farmacias →</a>
+        </section>
+
+        <!-- banner lateral -->
+        <section aria-label="Publicidad" class="rounded-lg border-2 border-dashed border-news-300 bg-news-50 p-3">
+          <p class="kicker mb-2 text-[10px] text-news-400">Publicidad</p>
+          <a href="#" class="block overflow-hidden rounded-md">
+            <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=vertical%20advertising%20banner%20for%20a%20neighborhood%20hardware%20store%2C%20organized%20tools%20and%20paint%2C%20dark%20blue%20background%2C%20modern%20corporate%20design%2C%20space%20for%20text&image_size=square"
+                 alt="Banner publicitario de Ferretería Central" onerror="imgFail(this)"
+                 class="h-64 w-full object-cover" />
+          </a>
+          <p class="mt-2 text-center text-xs text-news-400">Ferretería Central — Herramientas y pintura · Saladillo</p>
+        </section>
+
+        <!-- nube de etiquetas -->
+        <section class="rounded-lg border border-news-200 bg-white p-5 shadow-card" aria-labelledby="etiquetas">
+          <h2 id="etiquetas" class="mb-3 border-b-2 border-brand-800 pb-2 font-editorial text-lg font-bold text-brand-900">Etiquetas</h2>
+          <div class="flex flex-wrap gap-2">
+            <a href="#" class="tag-chip">Saladillo</a>
+            <a href="#" class="tag-chip">Del Carril</a>
+            <a href="#" class="tag-chip">Cazón</a>
+            <a href="#" class="tag-chip">Polvaredas</a>
+            <a href="#" class="tag-chip">Ruta 205</a>
+            <a href="#" class="tag-chip">Liga Saladillo</a>
+            <a href="#" class="tag-chip">Concejo Deliberante</a>
+            <a href="#" class="tag-chip">Cooperativa Eléctrica</a>
+            <a href="#" class="tag-chip">Hospital Zonal</a>
+            <a href="#" class="tag-chip">Sociedad Rural</a>
+            <a href="#" class="tag-chip">Bomberos Voluntarios</a>
+            <a href="#" class="tag-chip">Seguridad Vial</a>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <!-- ================================ PIE ================================ -->
+  <footer class="mt-10 bg-brand-950 text-brand-200">
+    <div class="container-news grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <p class="font-editorial text-xl font-bold text-white">Saladillo Noticias</p>
+        <p class="kicker mt-1 text-[10px] text-brand-300">El diario de nuestra ciudad · Desde 1932</p>
+        <p class="mt-3 text-sm leading-relaxed">Cobertura periodística de Saladillo y las localidades del partido, con información de servicio, policiales, política, deportes y agro.</p>
+      </div>
+      <nav aria-label="Secciones del pie">
+        <p class="kicker mb-3 text-[10px] text-white">Secciones</p>
+        <ul class="flex flex-col gap-2 text-sm">
+          <li><a href="#policiales" class="hover:text-white">Policiales</a></li>
+          <li><a href="#politica" class="hover:text-white">Política</a></li>
+          <li><a href="#deportes" class="hover:text-white">Deportes</a></li>
+          <li><a href="#interes-general" class="hover:text-white">Interés General</a></li>
+          <li><a href="#clasificados" class="hover:text-white">Clasificados</a></li>
+          <li><a href="#" class="hover:text-white">Agro</a></li>
+        </ul>
+      </nav>
+      <div>
+        <p class="kicker mb-3 text-[10px] text-white">Contacto</p>
+        <ul class="flex flex-col gap-2 text-sm">
+          <li>Av. San Martín 1234, Saladillo</li>
+          <li>Buenos Aires, Argentina</li>
+          <li><a href="tel:+542344450000" class="hover:text-white">+54 2344 45-0000</a></li>
+          <li><a href="mailto:redaccion@saladillonoticias.com.ar" class="hover:text-white">redaccion@saladillonoticias.com.ar</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="kicker mb-3 text-[10px] text-white">Localidades cubiertas</p>
+        <ul class="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+          <li>Saladillo</li>
+          <li>Del Carril</li>
+          <li>Cazón</li>
+          <li>Polvaredas</li>
+          <li>Juan José Paso</li>
+          <li>Álvarez de Toledo</li>
+          <li>La Barrancosa</li>
+          <li>Saladillo Norte</li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-white/10">
+      <div class="container-news flex flex-wrap items-center justify-between gap-2 py-4 text-xs text-brand-300">
+        <p>© 2026 Saladillo Noticias — Todos los derechos reservados.</p>
+        <p>Maqueta estática de demostración del diseño.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

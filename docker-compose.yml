@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: saladillo-noticias-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: saladillo
+      POSTGRES_PASSWORD: saladillo
+      POSTGRES_DB: saladillo_noticias
+    ports:
+      - '5432:5432'
+    volumes:
+      - saladillo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U saladillo -d saladillo_noticias']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  saladillo_pgdata:

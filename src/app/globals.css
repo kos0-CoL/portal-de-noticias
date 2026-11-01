@@ -1,0 +1,257 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-900: #0b1c36;
+    --brand-800: #122a4d;
+    --brand-600: #234e86;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-news-100 text-news-800 antialiased;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+  }
+
+  ::selection {
+    @apply bg-brand-800 text-white;
+  }
+
+  /* Barra de scroll sobria, acorde al azul institucional */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-news-100;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-brand-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-500;
+  }
+}
+
+@layer components {
+  /* ---------- Estructura ---------- */
+  .container-news {
+    @apply mx-auto w-full max-w-news px-4 sm:px-6 lg:px-8;
+  }
+
+  /* ---------- Cabecera / marca ---------- */
+  .brand-gradient {
+    background-image: linear-gradient(135deg, #0b1c36 0%, #122a4d 55%, #1a3c69 100%);
+  }
+
+  .kicker {
+    @apply text-[11px] font-bold uppercase tracking-[0.14em];
+  }
+
+  /* ---------- Titulos editoriales ---------- */
+  .headline-xl {
+    @apply font-editorial text-2xl font-bold leading-tight text-brand-900 sm:text-3xl lg:text-4xl;
+  }
+  .headline-lg {
+    @apply font-editorial text-xl font-bold leading-snug text-brand-900 sm:text-2xl;
+  }
+  .headline-md {
+    @apply font-editorial text-base font-bold leading-snug text-brand-900;
+  }
+  .headline-sm {
+    @apply font-editorial text-[15px] font-bold leading-snug text-brand-900;
+  }
+
+  /* ---------- Tarjetas de noticia ---------- */
+  .news-card {
+    @apply relative flex flex-col overflow-hidden rounded-lg border border-news-200 bg-white shadow-card transition hover:shadow-lg hover:border-brand-200;
+  }
+  .news-card-body {
+    @apply flex flex-1 flex-col gap-2 p-4;
+  }
+
+  /* ---------- Botones ---------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand-800 text-white hover:bg-brand-700 active:bg-brand-900;
+  }
+  .btn-secondary {
+    @apply btn border border-news-300 bg-white text-brand-800 hover:border-brand-300 hover:bg-brand-50;
+  }
+  .btn-ghost {
+    @apply btn text-brand-700 hover:bg-brand-50;
+  }
+  .btn-danger {
+    @apply btn bg-accent-500 text-white hover:bg-accent-600;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  /* ---------- Formularios ---------- */
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-news-600;
+  }
+  .input {
+    @apply w-full rounded-md border border-news-300 bg-white px-3 py-2 text-sm text-news-800 outline-none transition placeholder:text-news-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20;
+  }
+  .select {
+    @apply input appearance-none bg-[length:16px] bg-[right_0.6rem_center] bg-no-repeat pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236B7280'%3E%3Cpath d='M4.2 6.2 8 10l3.8-3.8'/%3E%3C/svg%3E");
+  }
+  .textarea {
+    @apply input min-h-[140px] resize-y leading-relaxed;
+  }
+  .checkbox {
+    @apply h-4 w-4 rounded border-news-300 text-brand-700 focus:ring-brand-500/30;
+  }
+
+  /* ---------- Backoffice ---------- */
+  .admin-card {
+    @apply rounded-xl border border-news-200 bg-white p-5 shadow-card;
+  }
+  .admin-card-header {
+    @apply mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-news-200 pb-3;
+  }
+  .admin-title {
+    @apply font-editorial text-lg font-bold text-brand-900;
+  }
+  .admin-sidebar-link {
+    @apply flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-brand-100 transition hover:bg-white/10;
+  }
+  .admin-sidebar-link-active {
+    @apply bg-white/15 text-white shadow-inner;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide;
+  }
+  .badge-gray {
+    @apply badge bg-news-200 text-news-700;
+  }
+  .badge-blue {
+    @apply badge bg-brand-100 text-brand-800;
+  }
+  .badge-green {
+    @apply badge bg-emerald-100 text-emerald-800;
+  }
+  .badge-amber {
+    @apply badge bg-amber-100 text-amber-800;
+  }
+  .badge-red {
+    @apply badge bg-red-100 text-red-700;
+  }
+
+  .table-admin {
+    @apply w-full text-left text-sm;
+  }
+  .table-admin thead th {
+    @apply border-b border-news-200 bg-news-50 px-3 py-2.5 text-[11px] font-bold uppercase tracking-wide text-news-500;
+  }
+  .table-admin tbody td {
+    @apply border-b border-news-100 px-3 py-3 align-middle text-news-700;
+  }
+  .table-admin tbody tr:hover {
+    @apply bg-brand-50/60;
+  }
+
+  /* ---------- Cuerpo de la nota ---------- */
+  .article-body {
+    @apply text-[17px] leading-[1.75] text-news-800;
+  }
+  .article-body > p {
+    @apply mb-5;
+  }
+  .article-body h2 {
+    @apply mt-8 mb-3 font-editorial text-xl font-bold text-brand-900 sm:text-2xl;
+  }
+  .article-body h3 {
+    @apply mt-6 mb-2 font-editorial text-lg font-bold text-brand-900;
+  }
+  .article-body a {
+    @apply font-medium text-brand-600 underline decoration-brand-300 underline-offset-2 hover:text-brand-800;
+  }
+  .article-body ul {
+    @apply mb-5 list-disc space-y-1.5 pl-6;
+  }
+  .article-body ol {
+    @apply mb-5 list-decimal space-y-1.5 pl-6;
+  }
+  .article-body blockquote {
+    @apply my-6 border-l-4 border-brand-700 bg-brand-50 py-3 pl-5 font-editorial text-lg italic text-brand-900;
+  }
+  .article-body img {
+    @apply my-6 w-full rounded-lg;
+  }
+  .article-body figure figcaption {
+    @apply -mt-4 mb-6 text-xs text-news-500;
+  }
+  .article-body hr {
+    @apply my-8 border-news-200;
+  }
+
+  .drop-cap::first-letter {
+    @apply float-left mr-2 mt-1 font-editorial text-5xl font-bold leading-none text-brand-800;
+  }
+
+  .link-underline {
+    @apply relative;
+  }
+  .link-underline::after {
+    content: '';
+    @apply absolute -bottom-0.5 left-0 h-0.5 w-0 bg-brand-600 transition-all duration-200;
+  }
+  .link-underline:hover::after {
+    @apply w-full;
+  }
+
+  .skeleton {
+    @apply animate-pulse rounded bg-news-200;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .line-clamp-2-custom {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3-custom {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* Impresion: el portal debe salir limpio en papel */
+@media print {
+  header,
+  footer,
+  aside,
+  .no-print {
+    display: none !important;
+  }
+  .article-body {
+    font-size: 12pt;
+  }
+}

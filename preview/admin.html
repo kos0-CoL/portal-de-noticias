@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Panel de administración — Saladillo Noticias</title>
+<meta name="description" content="Backoffice del portal Saladillo Noticias: dashboard, noticias, scraping, configuración de IA, banners y difusión en redes." />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: { 50:'#F4F7FB',100:'#E6EDF7',200:'#C4D5EC',300:'#96B2DA',400:'#5E88BE',500:'#3566A4',600:'#234E86',700:'#1A3C69',800:'#122A4D',900:'#0B1C36',950:'#071223' },
+          news: { 50:'#FBFBFD',100:'#F4F5F7',200:'#E8EAEE',300:'#D6D9E0',400:'#9AA0AC',500:'#6B7280',600:'#4B5563',700:'#374151',800:'#1F2937',900:'#111827' },
+          accent: { 500:'#C62828', 600:'#A81E1E' }
+        },
+        fontFamily: {
+          sans: ['system-ui','-apple-system','Segoe UI','Roboto','sans-serif'],
+          editorial: ['Georgia','Times New Roman','serif']
+        },
+        maxWidth: { news: '1240px' }
+      }
+    }
+  }
+</script>
+<link rel="stylesheet" href="styles.css" />
+<script>window.imgFail=function(el){el.onerror=null;el.classList.add('img-fallback');el.src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect width='16' height='12' fill='%23E8EAEE'/%3E%3C/svg%3E";};</script>
+</head>
+<body class="bg-news-100 font-sans text-news-800">
+
+<div class="min-h-screen lg:flex">
+
+  <!-- ============================== SIDEBAR ============================== -->
+  <aside id="admin-sidebar"
+    class="fixed inset-y-0 left-0 z-50 flex w-[260px] -translate-x-full flex-col overflow-y-auto transition-transform duration-300 lg:static lg:translate-x-0 lg:shrink-0"
+    style="background:linear-gradient(180deg,#0B1C36 0%,#122A4D 100%)">
+    <div class="border-b border-white/10 px-5 py-5">
+      <p class="font-editorial text-xl font-bold leading-none text-white">Saladillo Noticias</p>
+      <p class="kicker mt-1.5 text-[10px] text-brand-300">Panel de administración</p>
+    </div>
+    <nav class="flex flex-1 flex-col gap-1 p-3" aria-label="Menú del panel">
+      <button type="button" class="admin-sidebar-link is-active" data-section="dashboard" data-title="Dashboard"><span class="ico" aria-hidden="true">📊</span> Dashboard</button>
+      <button type="button" class="admin-sidebar-link" data-section="noticias" data-title="Noticias"><span class="ico" aria-hidden="true">📰</span> Noticias</button>
+      <button type="button" class="admin-sidebar-link" data-section="nueva" data-title="Nueva noticia"><span class="ico" aria-hidden="true">✍️</span> Nueva noticia</button>
+      <button type="button" class="admin-sidebar-link" data-section="categorias" data-title="Categorías"><span class="ico" aria-hidden="true">🗂️</span> Categorías</button>
+      <button type="button" class="admin-sidebar-link" data-section="clasificados" data-title="Clasificados"><span class="ico" aria-hidden="true">🏷️</span> Clasificados</button>
+      <div class="my-2 border-t border-white/10"></div>
+      <button type="button" class="admin-sidebar-link" data-section="scraping" data-title="Scraping"><span class="ico" aria-hidden="true">🕸️</span> Scraping</button>
+      <button type="button" class="admin-sidebar-link" data-section="ia" data-title="Configuración de IA"><span class="ico" aria-hidden="true">🤖</span> Configuración de IA</button>
+      <button type="button" class="admin-sidebar-link" data-section="banners" data-title="Banners / Monetización"><span class="ico" aria-hidden="true">📣</span> Banners / Monetización</button>
+      <button type="button" class="admin-sidebar-link" data-section="redes" data-title="Difusión en redes"><span class="ico" aria-hidden="true">📱</span> Difusión en redes</button>
+    </nav>
+    <div class="border-t border-white/10 p-3">
+      <a href="index.html" class="admin-sidebar-link" style="color:#cfdcf0">🌐 Ver el portal público</a>
+    </div>
+  </aside>
+  <div id="admin-overlay" class="fixed inset-0 z-40 hidden bg-black/50 lg:hidden"></div>
+
+  <!-- ========================== CONTENIDO ========================== -->
+  <div class="min-w-0 flex-1">
+
+    <!-- header -->
+    <header class="sticky top-0 z-30 border-b border-news-200 bg-white">
+      <div class="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div class="flex min-w-0 items-center gap-3">
+          <button id="admin-burger" type="button" class="btn btn-secondary btn-sm lg:hidden" aria-label="Abrir menú">☰</button>
+          <h1 id="admin-section-title" class="truncate font-editorial text-lg font-bold text-brand-900">Dashboard</h1>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="hidden text-right sm:block">
+            <p class="text-sm font-semibold text-news-800">Dirección Periodística</p>
+            <p class="text-[11px] font-bold uppercase tracking-wide text-brand-600">Admin</p>
+          </div>
+          <span class="hidden h-8 w-8 items-center justify-center rounded-full bg-brand-800 text-xs font-bold text-white sm:flex" aria-hidden="true">DP</span>
+          <a href="#" class="btn btn-secondary btn-sm">Cerrar sesión</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="p-4 sm:p-6">
+
+      <!-- ============================ DASHBOARD ============================ -->
+      <section class="admin-section" data-section="dashboard">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div class="admin-card"><p class="text-xs font-semibold uppercase tracking-wide text-news-500">Notas publicadas</p><p class="mt-1 font-editorial text-3xl font-bold text-brand-900">12</p></div>
+          <div class="admin-card"><p class="text-xs font-semibold uppercase tracking-wide text-news-500">Borradores</p><p class="mt-1 font-editorial text-3xl font-bold text-brand-900">4</p></div>
+          <div class="admin-card"><p class="text-xs font-semibold uppercase tracking-wide text-news-500">Pendientes de revisión</p><p class="mt-1 font-editorial text-3xl font-bold text-amber-600">3</p></div>
+          <div class="admin-card"><p class="text-xs font-semibold uppercase tracking-wide text-news-500">Visitas</p><p class="mt-1 font-editorial text-3xl font-bold text-brand-900">48.320</p></div>
+          <div class="admin-card"><p class="text-xs font-semibold uppercase tracking-wide text-news-500">Clasificados pendientes</p><p class="mt-1 font-editorial text-3xl font-bold text-brand-900">2</p></div>
+        </div>
+
+        <div class="mt-5 flex flex-wrap gap-2">
+          <button type="button" data-goto="nueva" class="btn btn-primary btn-sm">✍️ Nueva noticia</button>
+          <button type="button" data-goto="scraping" class="btn btn-secondary btn-sm">▶ Ejecutar scraping</button>
+          <button type="button" data-goto="ia" class="btn btn-secondary btn-sm">🤖 Configurar IA</button>
+          <button type="button" data-goto="banners" class="btn btn-secondary btn-sm">📣 Gestionar banners</button>
+        </div>
+
+        <div class="mt-5 grid gap-5 xl:grid-cols-3">
+          <div class="admin-card xl:col-span-2">
+            <div class="admin-card-header"><h2 class="admin-title">Últimas notas</h2><a href="index.html" class="text-sm font-semibold text-brand-600 hover:text-brand-800">Ver el portal →</a></div>
+            <div class="table-scroll">
+              <table class="table-admin">
+                <thead>
+                  <tr><th>Título</th><th>Categoría</th><th>Estado</th><th>Prioridad</th><th>Fecha</th><th>Vistas</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="font-semibold text-brand-900">Saladillo puso en marcha el operativo de prevención vial en la Ruta 205</td>
+                    <td>Policiales</td>
+                    <td><span class="badge badge-green">Publicada</span></td>
+                    <td><span class="badge badge-red">Urgente</span></td>
+                    <td>Hoy 09:40</td><td>142</td>
+                  </tr>
+                  <tr>
+                    <td class="font-semibold text-brand-900">El Concejo Deliberante aprobó el presupuesto 2027 con foco en agua potable</td>
+                    <td>Política</td>
+                    <td><span class="badge badge-green">Publicada</span></td>
+                    <td><span class="badge badge-amber">Prioridad alta</span></td>
+                    <td>Hoy 05:10</td><td>105</td>
+                  </tr>
+                  <tr>
+                    <td class="font-semibold text-brand-900">Un camión de carga volcó en la Ruta 51 sin heridos de gravedad</td>
+                    <td>Policiales</td>
+                    <td><span class="badge badge-green">Publicada</span></td>
+                    <td><span class="badge badge-amber">Prioridad alta</span></td>
+                    <td>Ayer 14:20</td><td>68</td>
+                  </tr>
+                  <tr>
+                    <td class="font-semibold text-brand-900">Nuevo plan de obras para la zona rural del partido</td>
+                    <td>Política</td>
+                    <td><span class="badge badge-amber">Pendiente de revisión</span></td>
+                    <td><span class="badge badge-gray">Normal</span></td>
+                    <td>Hoy 09:11</td><td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="font-semibold text-brand-900">Balance de la temporada de incendios de pastizales</td>
+                    <td>Interés General</td>
+                    <td><span class="badge badge-gray">Borrador</span></td>
+                    <td><span class="badge badge-gray">Normal</span></td>
+                    <td>Hoy 08:55</td><td>—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-card border-amber-300 bg-amber-50">
+            <div class="mb-3 flex items-center justify-between border-b border-amber-200 pb-3">
+              <h2 class="admin-title !text-amber-900">Pendientes de revisión</h2>
+              <span class="badge badge-amber">3</span>
+            </div>
+            <p class="mb-3 text-xs text-amber-800">Notas que trajo el scraper y esperan aprobación editorial.</p>
+            <ul class="flex flex-col gap-3">
+              <li class="rounded-md border border-amber-200 bg-white p-3">
+                <p class="text-sm font-semibold text-brand-900">Volcó un camión en la Ruta 51</p>
+                <p class="mt-1 text-xs text-news-500">Diario Regional Zona Sur · 2 palabras clave locales</p>
+                <div class="mt-2 flex gap-2"><span class="badge badge-amber">Alta</span><span class="badge badge-blue">Saladillo</span><span class="badge badge-blue">Polvaredas</span></div>
+              </li>
+              <li class="rounded-md border border-amber-200 bg-white p-3">
+                <p class="text-sm font-semibold text-brand-900">Nuevo plan de obras en la provincia</p>
+                <p class="mt-1 text-xs text-news-500">Portal Provincia de Buenos Aires · sin coincidencias locales</p>
+                <div class="mt-2 flex gap-2"><span class="badge badge-gray">Normal</span></div>
+              </li>
+              <li class="rounded-md border border-amber-200 bg-white p-3">
+                <p class="text-sm font-semibold text-brand-900">La región apuesta a la ganadería de precisión</p>
+                <p class="mt-1 text-xs text-news-500">Diario Regional Zona Sur · 1 palabra clave local</p>
+                <div class="mt-2 flex gap-2"><span class="badge badge-amber">Alta</span><span class="badge badge-blue">Sociedad Rural</span></div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================= NOTICIAS ============================= -->
+      <section class="admin-section hidden" data-section="noticias">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h2 class="admin-title">Todas las noticias</h2>
+            <button class="btn btn-primary btn-sm" data-goto="nueva">✍️ Nueva noticia</button>
+          </div>
+          <div class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div><label class="label" for="f-q">Buscar</label><input id="f-q" class="input" type="search" placeholder="Título o contenido…" /></div>
+            <div><label class="label" for="f-cat">Categoría</label>
+              <select id="f-cat" class="select"><option>Todas</option><option>Policiales</option><option>Política</option><option>Deportes</option><option>Interés General</option><option>Clasificados</option><option>Agro</option></select>
+            </div>
+            <div><label class="label" for="f-estado">Estado</label>
+              <select id="f-estado" class="select"><option>Todos</option><option>Publicada</option><option>Pendiente de revisión</option><option>Borrador</option><option>Archivada</option></select>
+            </div>
+            <div><label class="label" for="f-prio">Prioridad</label>
+              <select id="f-prio" class="select"><option>Todas</option><option>Urgente</option><option>Prioridad alta</option><option>Normal</option></select>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="table-admin">
+              <thead>
+                <tr><th></th><th>Título</th><th>Categoría</th><th>Estado</th><th>Prioridad</th><th>Autor</th><th>Fecha</th><th>Vistas</th><th>Acciones</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><img class="h-10 w-16 rounded object-cover" alt="" onerror="imgFail(this)" src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=nighttime%20police%20checkpoint%20on%20a%20provincial%20highway%20in%20Argentina%2C%20patrol%20car%20with%20blue%20lights%2C%20traffic%20cones%20on%20asphalt%2C%20documentary%20photojournalism%2C%20dramatic%20night%20lighting&image_size=landscape_4_3" /></td>
+                  <td class="font-semibold text-brand-900">Saladillo puso en marcha el operativo de prevención vial en la Ruta 205</td>
+                  <td>Policiales</td><td><span class="badge badge-green">Publicada</span></td><td><span class="badge badge-red">Urgente</span></td>
+                  <td>Dirección Periodística</td><td>Hoy 09:40</td><td>142</td>
+                  <td class="whitespace-nowrap text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="nota.html" class="hover:underline">Ver</a> · <a href="#" class="hover:underline">Duplicar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td>
+                </tr>
+                <tr>
+                  <td><img class="h-10 w-16 rounded object-cover" alt="" onerror="imgFail(this)" src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=city%20council%20session%20in%20an%20Argentine%20town%20hall%2C%20councilors%20seated%20at%20wooden%20desks%2C%20national%20flag%20in%20background%2C%20serious%20documentary%20photography%2C%20natural%20light&image_size=landscape_4_3" /></td>
+                  <td class="font-semibold text-brand-900">El Concejo Deliberante aprobó el presupuesto 2027 con foco en obras de agua potable</td>
+                  <td>Política</td><td><span class="badge badge-green">Publicada</span></td><td><span class="badge badge-amber">Prioridad alta</span></td>
+                  <td>Dirección Periodística</td><td>Hoy 05:10</td><td>105</td>
+                  <td class="whitespace-nowrap text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline">Ver</a> · <a href="#" class="hover:underline">Duplicar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td>
+                </tr>
+                <tr>
+                  <td><img class="h-10 w-16 rounded object-cover" alt="" onerror="imgFail(this)" src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=amateur%20soccer%20match%20in%20an%20Argentine%20municipal%20stadium%20at%20sunset%2C%20players%20fighting%20for%20the%20ball%2C%20popular%20stand%20with%20flags%2C%20realistic%20sports%20photography&image_size=landscape_4_3" /></td>
+                  <td class="font-semibold text-brand-900">Alumni le ganó a Del Carril en un clásico que se definió en el último minuto</td>
+                  <td>Deportes</td><td><span class="badge badge-green">Publicada</span></td><td><span class="badge badge-gray">Normal</span></td>
+                  <td>Dirección Periodística</td><td>Ayer 16:30</td><td>98</td>
+                  <td class="whitespace-nowrap text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline">Ver</a> · <a href="#" class="hover:underline">Duplicar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td>
+                </tr>
+                <tr>
+                  <td><img class="h-10 w-16 rounded object-cover" alt="" onerror="imgFail(this)" src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Argentine%20highway%20with%20an%20overturned%20cargo%20truck%20on%20the%20shoulder%2C%20patrol%20car%20and%20firefighters%20assisting%2C%20rural%20pampas%20landscape%2C%20realistic%20photojournalism%2C%20daylight&image_size=landscape_4_3" /></td>
+                  <td class="font-semibold text-brand-900">Un camión de carga volcó en la Ruta 51 sin heridos de gravedad</td>
+                  <td>Policiales</td><td><span class="badge badge-green">Publicada</span></td><td><span class="badge badge-amber">Prioridad alta</span></td>
+                  <td>Dirección Periodística</td><td>Ayer 14:20</td><td>68</td>
+                  <td class="whitespace-nowrap text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline">Ver</a> · <a href="#" class="hover:underline">Duplicar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td>
+                </tr>
+                <tr>
+                  <td><img class="h-10 w-16 rounded object-cover" alt="" onerror="imgFail(this)" src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=outdoor%20artisan%20market%20in%20a%20small%20Argentine%20town%20square%2C%20colorful%20canopy%20stalls%2C%20handmade%20crafts%20and%20regional%20food%2C%20families%20strolling%2C%20warm%20daytime%20photography&image_size=landscape_4_3" /></td>
+                  <td class="font-semibold text-brand-900">Polvaredas tendrá su primera feria de emprendedores el próximo domingo</td>
+                  <td>Interés General</td><td><span class="badge badge-green">Publicada</span></td><td><span class="badge badge-gray">Normal</span></td>
+                  <td>Dirección Periodística</td><td>Ayer 11:05</td><td>54</td>
+                  <td class="whitespace-nowrap text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline">Ver</a> · <a href="#" class="hover:underline">Duplicar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td>
+                </tr>
+                <tr>
+                  <td><img class="h-10 w-16 rounded object-cover" alt="" onerror="imgFail(this)" src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=rural%20agricultural%20show%20in%20Argentina%2C%20pedigree%20cattle%20in%20the%20judging%20ring%2C%20handlers%20in%20vests%2C%20audience%20watching%2C%20documentary%20farm%20photography%2C%20natural%20light&image_size=landscape_4_3" /></td>
+                  <td class="font-semibold text-brand-900">La Sociedad Rural confirmó la fecha de la 89ª Exposición de Ganadería</td>
+                  <td>Agro</td><td><span class="badge badge-amber">Pendiente de revisión</span></td><td><span class="badge badge-gray">Normal</span></td>
+                  <td>Dirección Periodística</td><td>Ayer 09:12</td><td>—</td>
+                  <td class="whitespace-nowrap text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline">Ver</a> · <a href="#" class="hover:underline">Duplicar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================== NUEVA NOTICIA ========================== -->
+      <section class="admin-section hidden" data-section="nueva">
+        <div class="grid gap-5 lg:grid-cols-3">
+          <div class="admin-card lg:col-span-2">
+            <div class="admin-card-header"><h2 class="admin-title">Redactar nota</h2></div>
+            <div class="flex flex-col gap-4">
+              <div><label class="label" for="n-titulo">Titular</label><input id="n-titulo" class="input" type="text" placeholder="Titular de la nota" /></div>
+              <div><label class="label" for="n-copete">Copete</label><textarea id="n-copete" class="textarea" placeholder="Resumen de apertura (máx. 158 caracteres para SEO)"></textarea></div>
+              <div><label class="label" for="n-cuerpo">Cuerpo</label><textarea id="n-cuerpo" class="textarea" placeholder="Cuerpo de la nota. Se admite HTML básico."></textarea></div>
+            </div>
+          </div>
+          <div class="flex flex-col gap-5">
+            <div class="admin-card">
+              <div class="admin-card-header"><h2 class="admin-title">Publicación</h2></div>
+              <div class="flex flex-col gap-4">
+                <div><label class="label" for="n-cat">Categoría</label>
+                  <select id="n-cat" class="select"><option>Policiales</option><option>Política</option><option>Deportes</option><option>Interés General</option><option>Clasificados</option><option>Agro</option></select>
+                </div>
+                <div><label class="label" for="n-prio">Prioridad</label>
+                  <select id="n-prio" class="select"><option>Normal</option><option>Prioridad Alta</option><option>Urgente</option></select>
+                </div>
+                <div><label class="label" for="n-tono">Tono de redacción IA</label>
+                  <select id="n-tono" class="select"><option>Informativo y Neutral</option><option selected>Cercano y Local</option><option>Llamativo y Clickbait</option><option>Formal y Serio</option></select>
+                </div>
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" checked /> Marcar como destacada</label>
+                <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" /> Marcar como último momento</label>
+              </div>
+            </div>
+            <div class="admin-card">
+              <div class="admin-card-header"><h2 class="admin-title">Imagen de portada</h2></div>
+              <div class="mb-3 h-36 w-full watermark-preview"><span class="wm-text">Saladillo Noticias</span></div>
+              <input class="input" type="text" placeholder="https://… o subir archivo" />
+              <div class="mt-3 flex gap-2"><button class="btn btn-secondary btn-sm">Subir imagen</button><button class="btn btn-ghost btn-sm">Quitar</button></div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-primary">Guardar borrador</button>
+              <button class="btn btn-secondary">Publicar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================== CATEGORÍAS =========================== -->
+      <section class="admin-section hidden" data-section="categorias">
+        <div class="admin-card">
+          <div class="admin-card-header"><h2 class="admin-title">Categorías</h2><button class="btn btn-primary btn-sm">+ Nueva categoría</button></div>
+          <div class="table-scroll">
+            <table class="table-admin">
+              <thead><tr><th>Color</th><th>Nombre</th><th>Slug</th><th>Descripción</th><th>Notas</th><th>Acciones</th></tr></thead>
+              <tbody>
+                <tr><td><span class="inline-block h-4 w-4 rounded-full" style="background:#7F1D1D"></span></td><td class="font-semibold text-brand-900">Policiales</td><td>policiales</td><td>Hechos de inseguridad, accidentes y justicia en Saladillo y la zona.</td><td>3</td><td class="text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td></tr>
+                <tr><td><span class="inline-block h-4 w-4 rounded-full" style="background:#1A3C69"></span></td><td class="font-semibold text-brand-900">Política</td><td>politica</td><td>Municipalidad, Concejo Deliberante, gestión y obras públicas.</td><td>2</td><td class="text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td></tr>
+                <tr><td><span class="inline-block h-4 w-4 rounded-full" style="background:#065F46"></span></td><td class="font-semibold text-brand-900">Deportes</td><td>deportes</td><td>Liga Saladillo de fútbol, básquet, automovilismo y deportes amateur.</td><td>1</td><td class="text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td></tr>
+                <tr><td><span class="inline-block h-4 w-4 rounded-full" style="background:#234E86"></span></td><td class="font-semibold text-brand-900">Interés General</td><td>interes-general</td><td>Comunidad, salud, educación, cultura y servicios de la ciudad.</td><td>5</td><td class="text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td></tr>
+                <tr><td><span class="inline-block h-4 w-4 rounded-full" style="background:#B45309"></span></td><td class="font-semibold text-brand-900">Clasificados</td><td>clasificados</td><td>Avisos de la comunidad: empleos, inmuebles, vehículos y servicios.</td><td>4</td><td class="text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td></tr>
+                <tr><td><span class="inline-block h-4 w-4 rounded-full" style="background:#3F6212"></span></td><td class="font-semibold text-brand-900">Agro</td><td>agro</td><td>Campo, ganadería, soja y la rural de Saladillo.</td><td>1</td><td class="text-xs font-semibold text-brand-600"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="hover:underline text-accent-500">Eliminar</a></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================== CLASIFICADOS ========================== -->
+      <section class="admin-section hidden" data-section="clasificados">
+        <div class="admin-card">
+          <div class="admin-card-header"><h2 class="admin-title">Clasificados de la comunidad</h2><span class="badge badge-amber">2 pendientes</span></div>
+          <div class="table-scroll">
+            <table class="table-admin">
+              <thead><tr><th>Título</th><th>Sección</th><th>Localidad</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead>
+              <tbody>
+                <tr><td class="font-semibold text-brand-900">Se busca oficial de albañilería con experiencia</td><td>Empleos</td><td>Saladillo</td><td>—</td><td><span class="badge badge-amber">Pendiente</span></td><td class="text-xs font-semibold"><a href="#" class="text-emerald-700 hover:underline">Aprobar</a> · <a href="#" class="text-accent-500 hover:underline">Rechazar</a></td></tr>
+                <tr><td class="font-semibold text-brand-900">Alquilo casa 3 dormitorios en Del Carril</td><td>Inmuebles</td><td>Del Carril</td><td>$ 380.000</td><td><span class="badge badge-amber">Pendiente</span></td><td class="text-xs font-semibold"><a href="#" class="text-emerald-700 hover:underline">Aprobar</a> · <a href="#" class="text-accent-500 hover:underline">Rechazar</a></td></tr>
+                <tr><td class="font-semibold text-brand-900">Vendo Fiat Cronos 2021 con 42.000 km</td><td>Vehículos</td><td>Saladillo</td><td>$ 16.500.000</td><td><span class="badge badge-green">Publicado</span></td><td class="text-xs font-semibold"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="text-accent-500 hover:underline">Eliminar</a></td></tr>
+                <tr><td class="font-semibold text-brand-900">Clases particulares de matemática y física</td><td>Servicios</td><td>Saladillo</td><td>$ 8.000</td><td><span class="badge badge-green">Publicado</span></td><td class="text-xs font-semibold"><a href="#" class="hover:underline">Editar</a> · <a href="#" class="text-accent-500 hover:underline">Eliminar</a></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================= SCRAPING ============================= -->
+      <section class="admin-section hidden" data-section="scraping">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div class="admin-card"><p class="text-xs font-semibold uppercase tracking-wide text-news-500">Fuentes activas</p><p class="mt-1 font-editorial text-3xl font-bold text-brand-900">2</p></div>
+          <div class="admin-card"><p class="text-xs font-semibold uppercase tracking-wide text-news-500">Items pendientes</p><p class="mt-1 font-editorial text-3xl font-bold text-brand-900">7</p></div>
+          <div class="admin-card"><p class="text-xs font-semibold uppercase tracking-wide text-news-500">Notas pend. de revisión</p><p class="mt-1 font-editorial text-3xl font-bold text-amber-600">3</p></div>
+          <div class="admin-card"><p class="text-xs font-semibold uppercase tracking-wide text-news-500">Última ejecución</p><p class="mt-1 font-editorial text-2xl font-bold text-brand-900" id="scrape-stamp">hace 20 min</p></div>
+          <div class="admin-card"><p class="text-xs font-semibold uppercase tracking-wide text-news-500">Prioridad alta</p><p class="mt-1 font-editorial text-3xl font-bold text-accent-500">4</p></div>
+        </div>
+
+        <div class="admin-card mt-5">
+          <div class="admin-card-header"><h2 class="admin-title">Ejecución del scraper</h2></div>
+          <div class="flex flex-wrap items-center gap-4">
+            <button id="run-scraping" type="button" class="btn btn-primary !px-6 !py-3 !text-base">▶ Ejecutar scraping ahora</button>
+            <label class="flex items-center gap-2 text-sm font-medium"><input type="checkbox" class="checkbox" checked /> Ejecutar todas las fuentes</label>
+          </div>
+          <div id="scrape-log" class="mt-4 hidden">
+            <p class="kicker mb-2 text-news-400">Log de ejecución</p>
+            <div class="log-panel" id="scrape-log-lines"></div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid gap-5 xl:grid-cols-2">
+          <!-- configuración de fuente -->
+          <div class="admin-card">
+            <div class="admin-card-header"><h2 class="admin-title">Configuración de fuente</h2><span class="badge badge-green">Activa</span></div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="sm:col-span-2"><label class="label" for="s-nombre">Nombre</label><input id="s-nombre" class="input" type="text" value="Diario Regional Zona Sur" /></div>
+              <div class="sm:col-span-2"><label class="label" for="s-url">URL base</label><input id="s-url" class="input" type="url" value="https://ejemplo-regional.com.ar" /></div>
+              <div><label class="label" for="s-listado">Selector del listado</label><input id="s-listado" class="input" type="text" value="article a.titulo" /></div>
+              <div><label class="label" for="s-contenido">Selector del contenido</label><input id="s-contenido" class="input" type="text" value="div.entry-content" /></div>
+              <div><label class="label" for="s-imagen">Selector de imagen</label><input id="s-imagen" class="input" type="text" value="figure img" /></div>
+              <div><label class="label" for="s-delay">Delay entre pedidos (ms)</label><input id="s-delay" class="input" type="number" value="2000" /></div>
+              <div><label class="label" for="s-cron">Programación</label>
+                <select id="s-cron" class="select"><option>Manual</option><option>Cada hora</option><option selected>Cada 2 horas</option><option>Cada 3 horas</option><option>Cada 6 horas</option></select>
+              </div>
+              <label class="flex items-center gap-2 pt-6 text-sm"><input type="checkbox" class="checkbox" checked /> Rotar User-Agent (12+ UAs reales)</label>
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" checked /> Respetar robots.txt</label>
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" /> Usar Puppeteer (sitios con JavaScript)</label>
+            </div>
+
+            <div class="mt-5 border-t border-news-200 pt-4">
+              <p class="label">Mapeo de categorías</p>
+              <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-2">
+                  <input class="input" type="text" value="Seguridad" aria-label="Sección externa" />
+                  <span class="text-news-400" aria-hidden="true">→</span>
+                  <select class="select" aria-label="Categoría local"><option>Policiales</option><option>Política</option><option>Deportes</option><option>Interés General</option><option>Agro</option></select>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input class="input" type="text" value="Política" aria-label="Sección externa" />
+                  <span class="text-news-400" aria-hidden="true">→</span>
+                  <select class="select" aria-label="Categoría local"><option>Policiales</option><option selected>Política</option><option>Deportes</option><option>Interés General</option><option>Agro</option></select>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input class="input" type="text" value="Rural" aria-label="Sección externa" />
+                  <span class="text-news-400" aria-hidden="true">→</span>
+                  <select class="select" aria-label="Categoría local"><option>Policiales</option><option>Política</option><option>Deportes</option><option>Interés General</option><option selected>Agro</option></select>
+                </div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm mt-3">+ Agregar mapeo</button>
+            </div>
+
+            <div class="mt-4 flex gap-2"><button class="btn btn-primary btn-sm">Guardar fuente</button><button class="btn btn-ghost btn-sm">Probar selectores</button></div>
+          </div>
+
+          <!-- bandeja de revisión -->
+          <div class="admin-card">
+            <div class="admin-card-header"><h2 class="admin-title">Bandeja de revisión</h2><span class="badge badge-amber">3</span></div>
+            <div class="table-scroll">
+              <table class="table-admin">
+                <thead><tr><th>Prioridad</th><th>Título</th><th>Fuente</th><th>Palabras clave locales</th><th>Fecha</th><th>Acciones</th></tr></thead>
+                <tbody>
+                  <tr class="bg-amber-50">
+                    <td><span class="badge badge-amber">Alta</span></td>
+                    <td class="font-semibold text-brand-900">Volcó un camión en la Ruta 51</td>
+                    <td>Diario Regional Zona Sur</td>
+                    <td><span class="badge badge-blue">Saladillo</span> <span class="badge badge-blue">Polvaredas</span></td>
+                    <td>Hoy 09:06</td>
+                    <td class="whitespace-nowrap text-xs font-semibold"><a href="#" class="text-brand-600 hover:underline">Revisar</a> · <a href="#" class="text-accent-500 hover:underline">Descartar</a> · <a href="#" class="text-news-500 hover:underline">Ver original</a></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge badge-gray">Normal</span></td>
+                    <td class="font-semibold text-brand-900">Nuevo plan de obras en la provincia</td>
+                    <td>Portal Provincia de Bs. As.</td>
+                    <td><span class="text-xs text-news-400">Sin coincidencias</span></td>
+                    <td>Hoy 09:09</td>
+                    <td class="whitespace-nowrap text-xs font-semibold"><a href="#" class="text-brand-600 hover:underline">Revisar</a> · <a href="#" class="text-accent-500 hover:underline">Descartar</a> · <a href="#" class="text-news-500 hover:underline">Ver original</a></td>
+                  </tr>
+                  <tr class="bg-amber-50">
+                    <td><span class="badge badge-amber">Alta</span></td>
+                    <td class="font-semibold text-brand-900">La región apuesta a la ganadería de precisión</td>
+                    <td>Diario Regional Zona Sur</td>
+                    <td><span class="badge badge-blue">Sociedad Rural</span></td>
+                    <td>Hoy 09:11</td>
+                    <td class="whitespace-nowrap text-xs font-semibold"><a href="#" class="text-brand-600 hover:underline">Revisar</a> · <a href="#" class="text-accent-500 hover:underline">Descartar</a> · <a href="#" class="text-news-500 hover:underline">Ver original</a></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================== CONFIGURACIÓN DE IA ======================== -->
+      <section class="admin-section hidden" data-section="ia">
+        <div class="grid gap-5 xl:grid-cols-2">
+          <div class="admin-card">
+            <div class="admin-card-header"><h2 class="admin-title">Proveedor y credenciales</h2></div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div><label class="label" for="ia-prov">Proveedor</label>
+                <select id="ia-prov" class="select"><option selected>OpenAI</option><option>OpenRouter</option><option>Groq</option><option>Anthropic</option><option>Gemini</option><option>Personalizado</option></select>
+              </div>
+              <div><label class="label" for="ia-model">Modelo</label>
+                <select id="ia-model" class="select"><option selected>gpt-4o-mini</option><option>gpt-4o</option><option>gpt-4.1</option><option>o4-mini</option></select>
+              </div>
+              <div class="sm:col-span-2"><label class="label" for="ia-key">API Key</label><input id="ia-key" class="input" type="password" value="sk-proj••••••••••••9f2a" /></div>
+              <div class="sm:col-span-2 rounded-md border border-brand-200 bg-brand-50 p-3 text-sm text-brand-800">🔒 La clave se guarda cifrada con AES-256-GCM y nunca se devuelve al navegador.</div>
+              <div class="sm:col-span-2">
+                <label class="label" for="ia-temp">Temperatura — <span id="temp-val">0.75</span></label>
+                <input id="ia-temp" type="range" min="0" max="1" step="0.05" value="0.75" class="w-full accent-brand-700" oninput="document.getElementById('temp-val').textContent=this.value" />
+              </div>
+              <div class="sm:col-span-2">
+                <button id="ai-test" type="button" class="btn btn-secondary">Probar conexión</button>
+                <p id="ai-test-result" class="mt-3 text-sm font-semibold text-news-500"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-header"><h2 class="admin-title">Opciones de redacción</h2></div>
+            <label class="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" checked /> Reescribir automáticamente las notas del scraper</label>
+            <label class="mb-5 flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" checked /> Citar siempre la fuente original al final</label>
+
+            <p class="label">Selector de tono de redacción</p>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="ia-tono relative">
+                <input type="radio" name="tono" value="INFORMATIVO_NEUTRAL" />
+                <div class="tono-card">
+                  <p class="font-semibold text-brand-900">Informativo y Neutral</p>
+                  <p class="mt-1 text-xs text-news-500">Estilo periodístico clásico: hechos, fuentes y cierre. Sin adjetivos innecesarios.</p>
+                </div>
+              </label>
+              <label class="ia-tono relative">
+                <input type="radio" name="tono" value="CERCANO_LOCAL" checked />
+                <div class="tono-card">
+                  <p class="font-semibold text-brand-900">Cercano y Local</p>
+                  <p class="mt-1 text-xs text-news-500">Adaptado a la comunidad de Saladillo, con lenguaje cotidiano y referencias a la ciudad.</p>
+                </div>
+              </label>
+              <label class="ia-tono relative">
+                <input type="radio" name="tono" value="LLAMATIVO_CLICKBAIT" />
+                <div class="tono-card">
+                  <p class="font-semibold text-brand-900">Llamativo y Clickbait</p>
+                  <p class="mt-1 text-xs text-news-500">Titulares de alto impacto pensados para redes sociales. Sin perder veracidad.</p>
+                </div>
+              </label>
+              <label class="ia-tono relative">
+                <input type="radio" name="tono" value="FORMAL_SERIO" />
+                <div class="tono-card">
+                  <p class="font-semibold text-brand-900">Formal y Serio</p>
+                  <p class="mt-1 text-xs text-news-500">Registro protocolar para política, economía y actos oficiales.</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-header"><h2 class="admin-title">Marca de agua</h2></div>
+            <label class="mb-4 flex items-center gap-2 text-sm"><input type="checkbox" class="checkbox" checked /> Aplicar marca de agua</label>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="sm:col-span-2"><label class="label" for="wm-text">Texto</label><input id="wm-text" class="input" type="text" value="Saladillo Noticias" /></div>
+              <div><label class="label" for="wm-op">Opacidad — <span id="wm-op-val">0.35</span></label><input id="wm-op" type="range" min="0" max="1" step="0.05" value="0.35" class="w-full accent-brand-700" oninput="document.getElementById('wm-op-val').textContent=this.value" /></div>
+              <div><label class="label" for="wm-pos">Posición</label>
+                <select id="wm-pos" class="select"><option>Noroeste</option><option>Noreste</option><option>Sudoeste</option><option selected>Sudeste</option></select>
+              </div>
+              <div><label class="label" for="wm-w">Ancho máximo (px)</label><input id="wm-w" class="input" type="number" value="1600" /></div>
+              <div><label class="label" for="wm-q">Calidad (JPEG)</label><input id="wm-q" class="input" type="number" value="82" /></div>
+            </div>
+            <div class="mt-4">
+              <p class="label">Previsualización</p>
+              <div class="watermark-preview h-40 w-full"><span class="wm-text">Saladillo Noticias</span></div>
+            </div>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-header"><h2 class="admin-title">Muestra del flujo de la IA</h2><span class="badge badge-green">Similitud 23%</span></div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <p class="kicker mb-2 text-news-400">Texto original (scraper)</p>
+                <div class="max-h-56 overflow-y-auto rounded-md border border-news-200 bg-news-50 p-3 text-xs leading-relaxed text-news-600">
+                  Un camión de carga que transportaba granos volcó esta mañana en el kilómetro 34 de la Ruta Provincial 51, a la altura del cruce con el camino que conecta con Polvaredas. El conductor, de 44 años, resultó con heridas leves y fue trasladado al hospital zonal por control.
+                </div>
+              </div>
+              <div>
+                <p class="kicker mb-2 text-brand-600">Texto reescrito por IA</p>
+                <div class="max-h-56 overflow-y-auto rounded-md border border-brand-200 bg-brand-50 p-3 text-xs leading-relaxed text-brand-900">
+                  Un camión que llevaba granos volcó ayer a la mañana en la Ruta 51, justo en el cruce que conecta con Polvaredas. El conductor, un vecino de 44 años, sufrió solo heridas leves y fue llevado al hospital de Saladillo para un control.
+                </div>
+              </div>
+            </div>
+            <p class="mt-3 text-sm font-semibold text-emerald-700">Similitud con el original: 23% — Apto para publicar</p>
+
+            <div class="mt-4 grid gap-3 border-t border-news-200 pt-4">
+              <div><label class="label" for="ia-mtitle">Meta Title</label><input id="ia-mtitle" class="input" type="text" value="Un camión volcó en la Ruta 51 sin heridos de gravedad" /></div>
+              <div>
+                <label class="label" for="ia-mdesc">Meta Description</label>
+                <input id="ia-mdesc" class="input" type="text" value="El hecho ocurrió a la altura del cruce con el camino a Polvaredas. El conductor fue asistido y trasladado al hospital por control." />
+                <p class="mt-1 text-xs text-news-400">132 / 158 caracteres</p>
+              </div>
+              <div>
+                <p class="label">Tags</p>
+                <div class="flex flex-wrap gap-2">
+                  <span class="badge badge-blue">Polvaredas</span><span class="badge badge-blue">Ruta 51</span><span class="badge badge-blue">Policiales</span><span class="badge badge-blue">Tránsito</span>
+                </div>
+              </div>
+              <div>
+                <p class="label">Resumen para redes</p>
+                <div class="rounded-md border border-news-200 bg-news-50 p-3 text-sm text-news-700">
+                  Un camión de carga volcó en la Ruta 51, a la altura del cruce con el camino a Polvaredas. El conductor fue asistido y trasladado al hospital por control. Leé la nota completa en Saladillo Noticias. #Saladillo #SaladilloNoticias
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== BANNERS / MONETIZACIÓN ==================== -->
+      <section class="admin-section hidden" data-section="banners">
+        <div class="admin-card">
+          <div class="admin-card-header"><h2 class="admin-title">Zonas de banners</h2><span class="badge badge-blue">4 activos</span></div>
+          <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="rounded-lg border border-news-200 p-3"><p class="text-sm font-semibold text-brand-900">Cabecera (leaderboard)</p><p class="text-xs text-news-500">1 banner activo</p></div>
+            <div class="rounded-lg border border-news-200 p-3"><p class="text-sm font-semibold text-brand-900">Home — debajo del destacado</p><p class="text-xs text-news-500">1 banner activo</p></div>
+            <div class="rounded-lg border border-news-200 p-3"><p class="text-sm font-semibold text-brand-900">Dentro de la nota</p><p class="text-xs text-news-500">1 banner activo</p></div>
+            <div class="rounded-lg border border-news-200 p-3"><p class="text-sm font-semibold text-brand-900">Barra lateral</p><p class="text-xs text-news-500">1 banner activo</p></div>
+            <div class="rounded-lg border border-news-200 p-3"><p class="text-sm font-semibold text-brand-900">Pie de página</p><p class="text-xs text-news-500">sin banners</p></div>
+            <div class="rounded-lg border border-news-200 p-3"><p class="text-sm font-semibold text-brand-900">Celular — anclado abajo</p><p class="text-xs text-news-500">sin banners</p></div>
+          </div>
+        </div>
+
+        <div class="admin-card mt-5">
+          <div class="admin-card-header"><h2 class="admin-title">Banners</h2><button class="btn btn-primary btn-sm">+ Nuevo banner</button></div>
+          <div class="table-scroll">
+            <table class="table-admin">
+              <thead><tr><th>Anunciante</th><th>Tipo</th><th>Zona</th><th>Impresiones</th><th>Clics</th><th>CTR</th><th>Estado</th></tr></thead>
+              <tbody>
+                <tr><td class="font-semibold text-brand-900">Panadería La Espiga</td><td>Imagen</td><td>Home — debajo del destacado</td><td>12.480</td><td>264</td><td class="font-semibold text-brand-700">2,11%</td><td><span class="badge badge-green">Activo</span></td></tr>
+                <tr><td class="font-semibold text-brand-900">Ferretería Central</td><td>Imagen</td><td>Barra lateral</td><td>8.910</td><td>132</td><td class="font-semibold text-brand-700">1,48%</td><td><span class="badge badge-green">Activo</span></td></tr>
+                <tr><td class="font-semibold text-brand-900">Seguros Saladillo</td><td>Rotativo</td><td>Dentro de la nota</td><td>15.320</td><td>341</td><td class="font-semibold text-brand-700">2,23%</td><td><span class="badge badge-green">Activo</span></td></tr>
+                <tr><td class="font-semibold text-brand-900">Google AdSense</td><td>AdSense</td><td>Cabecera</td><td>24.100</td><td>402</td><td class="font-semibold text-brand-700">1,67%</td><td><span class="badge badge-green">Activo</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-card mt-5">
+          <div class="admin-card-header"><h2 class="admin-title">Subir un banner nuevo</h2></div>
+          <div class="grid gap-5 lg:grid-cols-2">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div><label class="label" for="b-adv">Anunciante</label><input id="b-adv" class="input" type="text" placeholder="Nombre del comercio" /></div>
+              <div><label class="label" for="b-tipo">Tipo</label><select id="b-tipo" class="select"><option>Imagen</option><option>AdSense</option><option>HTML</option><option>Rotativo</option></select></div>
+              <div><label class="label" for="b-zona">Zona</label><select id="b-zona" class="select"><option>Cabecera</option><option>Home — debajo del destacado</option><option>Dentro de la nota</option><option>Barra lateral</option><option>Pie de página</option><option>Celular — anclado abajo</option></select></div>
+              <div><label class="label" for="b-url">URL destino</label><input id="b-url" class="input" type="url" placeholder="https://…" /></div>
+              <div class="sm:col-span-2"><label class="label" for="b-file">Archivo</label><input id="b-file" class="input" type="file" /></div>
+              <div class="sm:col-span-2 flex gap-2"><button class="btn btn-primary btn-sm">Guardar banner</button><button class="btn btn-ghost btn-sm">Cancelar</button></div>
+            </div>
+            <div>
+              <p class="label">Previsualización</p>
+              <div class="overflow-hidden rounded-md border border-news-200">
+                <img src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=horizontal%20advertising%20banner%20for%20an%20Argentine%20local%20pharmacy%2C%20medicine%20shelves%20and%20healthy%20lifestyle%2C%20light%20blue%20and%20white%20palette%2C%20clean%20professional%20design&image_size=landscape_16_9"
+                     alt="Previsualización del banner" onerror="imgFail(this)" class="h-40 w-full object-cover" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================= DIFUSIÓN EN REDES ========================= -->
+      <section class="admin-section hidden" data-section="redes">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div class="admin-card">
+            <div class="flex items-center justify-between"><p class="font-editorial text-lg font-bold text-brand-900">Facebook</p><span class="badge badge-green">Activo</span></div>
+            <p class="mt-1 text-xs text-news-500">Página de Facebook — Saladillo Noticias</p>
+            <p class="mt-3 text-sm">Publica automáticamente: <span class="font-semibold text-emerald-700">Sí</span></p>
+          </div>
+          <div class="admin-card">
+            <div class="flex items-center justify-between"><p class="font-editorial text-lg font-bold text-brand-900">Instagram</p><span class="badge badge-green">Activo</span></div>
+            <p class="mt-1 text-xs text-news-500">@saladillonoticias</p>
+            <p class="mt-3 text-sm">Publica automáticamente: <span class="font-semibold text-news-500">No</span></p>
+          </div>
+          <div class="admin-card">
+            <div class="flex items-center justify-between"><p class="font-editorial text-lg font-bold text-brand-900">Telegram</p><span class="badge badge-green">Activo</span></div>
+            <p class="mt-1 text-xs text-news-500">Canal — Saladillo Al Instante</p>
+            <p class="mt-3 text-sm">Publica automáticamente: <span class="font-semibold text-emerald-700">Sí</span></p>
+          </div>
+          <div class="admin-card">
+            <div class="flex items-center justify-between"><p class="font-editorial text-lg font-bold text-brand-900">WhatsApp</p><span class="badge badge-gray">Inactivo</span></div>
+            <p class="mt-1 text-xs text-news-500">Canal — Comunidad</p>
+            <p class="mt-3 text-sm">Publica automáticamente: <span class="font-semibold text-news-500">No</span></p>
+          </div>
+        </div>
+
+        <div class="mt-5 grid gap-5 xl:grid-cols-3">
+          <div class="admin-card xl:col-span-2">
+            <div class="admin-card-header"><h2 class="admin-title">Cola de publicaciones</h2></div>
+            <div class="table-scroll">
+              <table class="table-admin">
+                <thead><tr><th>Nota</th><th>Canal</th><th>Estado</th><th>Acción</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td class="font-semibold text-brand-900">Saladillo puso en marcha el operativo de prevención vial en la Ruta 205</td>
+                    <td>Telegram</td><td><span class="badge badge-green">Publicado</span></td><td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="font-semibold text-brand-900">El Concejo Deliberante aprobó el presupuesto 2027</td>
+                    <td>Facebook</td><td><span class="badge badge-green">Publicado</span></td><td>—</td>
+                  </tr>
+                  <tr>
+                    <td class="font-semibold text-brand-900">Un camión de carga volcó en la Ruta 51 sin heridos de gravedad</td>
+                    <td>WhatsApp</td><td><span class="badge badge-red">Error</span> <span class="text-xs text-news-500">Canal sin permisos de administrador</span></td>
+                    <td><button class="btn btn-secondary btn-sm">Reintentar</button></td>
+                  </tr>
+                  <tr>
+                    <td class="font-semibold text-brand-900">Comenzó el ciclo de cine argentino en el Centro Cultural</td>
+                    <td>Instagram</td><td><span class="badge badge-gray">Omitido</span> <span class="text-xs text-news-500">Red configurada para 1 publicación por hora</span></td>
+                    <td><button class="btn btn-secondary btn-sm">Reintentar</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="admin-card">
+            <div class="admin-card-header"><h2 class="admin-title">Cómo conectar Telegram</h2></div>
+            <ol class="flex list-decimal flex-col gap-2 pl-5 text-sm text-news-700">
+              <li>Creá un bot conversando con <a href="https://t.me/BotFather" target="_blank" rel="noopener" class="font-semibold text-brand-600 underline underline-offset-2">@BotFather</a> en Telegram.</li>
+              <li>Pegá el token del bot en el campo de configuración del canal.</li>
+              <li>Agregá el bot como administrador del canal de difusión.</li>
+              <li>Usá <code class="rounded bg-news-100 px-1.5 py-0.5 text-xs">@nombreDelCanal</code> como chat ID.</li>
+            </ol>
+            <div class="mt-4 border-t border-news-200 pt-4">
+              <label class="label" for="tg-token">Token del bot</label>
+              <input id="tg-token" class="input" type="password" value="123456789:AA•••••••••••••••••" />
+              <label class="label mt-3" for="tg-chat">Chat ID</label>
+              <input id="tg-chat" class="input" type="text" value="@saladilloalinstante" />
+              <button class="btn btn-primary btn-sm mt-3">Guardar canal</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

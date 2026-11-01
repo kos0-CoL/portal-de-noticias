@@ -1,0 +1,742 @@
+// ---------------------------------------------------------------------------
+// Portal de Noticias Local - Saladillo, Buenos Aires
+// Modelo de datos completo (PostgreSQL)
+//
+// Para pasar a SQLite en un entorno de demo, cambia el provider a "sqlite"
+// y reemplaza los tipos String[] por String con JSON serializado.
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================ ENUMS =======================================
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum ArticleStatus {
+  DRAFT // Borrador cargado a mano por el administrador
+  PENDING_REVIEW // Traido por el scraper, esperando revision humana
+  PUBLISHED // Visible en el portal publico
+  ARCHIVED
+}
+
+enum ArticlePriority {
+  NORMAL
+  ALTA // Coincidencia con palabras clave locales (Saladillo, Del Carril, Cazon...)
+  URGENTE
+}
+
+enum AiTonality {
+  INFORMATIVO_NEUTRAL
+  CERCANO_LOCAL
+  LLAMATIVO_CLICKBAIT
+  FORMAL_SERIO
+}
+
+enum BannerType {
+  IMAGE // Banner propio subido por el administrador (comercio local)
+  ADSENSE // Slot de Google AdSense (auto ads / unidades de anuncio)
+  HTML // Codigo HTML/JS pegado a mano (embeds de terceros)
+  ROTATING // Grupo de banners que rotan por peso
+}
+
+enum BannerZone {
+  HEADER
+  HOME_TOP
+  INLINE_ARTICLE
+  SIDEBAR
+  FOOTER
+  MOBILE_STICKY
+}
+
+enum SourceStatus {
+  IDLE
+  RUNNING
+  OK
+  ERROR
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  PARTIAL
+  ERROR
+}
+
+enum ScrapedItemStatus {
+  PENDING // Extraido, esperando procesamiento/revision
+  PROCESSED // Ya convertido en Article (borrador)
+  DISCARDED
+  ERROR
+}
+
+enum SocialNetwork {
+  FACEBOOK
+  INSTAGRAM
+  TELEGRAM
+  X
+  WHATSAPP
+}
+
+enum SocialPostStatus {
+  PENDING
+  SENT
+  ERROR
+  SKIPPED
+}
+
+enum ClassifiedStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  EXPIRED
+}
+
+enum KeywordType {
+  LOCALIDAD // Saladillo, Del Carril, Cazon, Polvaredas...
+  FUNCIONARIO // Intendente, secretarios, concejales...
+  TEMA // Temas sensibles de la ciudad
+}
+
+// ============================ USUARIOS ====================================
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(ADMIN)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  articles  Article[]
+  jobs      ScrapeJob[]
+  suscripciones UserSubscription[]
+
+  @@map("users")
+}
+
+// ============================ CONTENIDO ===================================
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  color       String   @default("#122A4D")
+  iconName    String?
+  position    Int      @default(0)
+  isActive    Boolean  @default(true)
+  isMenu      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  articles  Article[]
+  mappings  SourceCategoryMapping[]
+
+  @@index([position])
+  @@map("categories")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  articles Article[]
+
+  @@map("tags")
+}
+
+model Article {
+  id      String @id @default(cuid())
+  title   String
+  slug    String @unique
+  summary String? // Copete / bajada
+  content String // HTML ya sanitizado y formateado
+
+  coverImage    String?
+  coverImageAlt String?
+
+  status   ArticleStatus   @default(DRAFT)
+  priority ArticlePriority @default(NORMAL)
+
+  // SEO y difusion generados por IA
+  metaTitle       String?
+  metaDescription String?
+  socialSummary   String? // Resumen corto para Facebook/Instagram/Telegram
+  focusKeyword    String?
+  ogImage         String?
+
+  // Metricas editoriales
+  readingTime Int     @default(1) // Minutos estimados de lectura
+  wordCount   Int     @default(0)
+  views       Int     @default(0)
+
+  isFeatured Boolean   @default(false)
+  isBreaking Boolean   @default(false)
+  isPremium  Boolean    @default(false)
+  publishedAt DateTime?
+  expiresAt   DateTime?
+
+  // Trazabilidad del scraper / IA
+  sourceName        String?
+  sourceUrl         String?
+  sourcePublishedAt DateTime?
+  scrapedItemId     String?  @unique
+  aiTonality        AiTonality?
+  aiRewritten       Boolean  @default(false)
+  aiModel           String?
+  aiCitesSource     Boolean  @default(false)
+  originalityScore  Float? // 0..1, heuristica de similitud con el original
+  reviewNotes       String?
+
+  categoryId String
+  authorId   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category    Category        @relation(fields: [categoryId], references: [id])
+  author      User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  scrapedItem ScrapedItem?    @relation("ScrapedItemArticle", fields: [scrapedItemId], references: [id])
+  images      ArticleImage[]
+  tags        Tag[]
+  socialPosts SocialPost[]
+  comments    Comment[]
+
+  @@index([status, publishedAt])
+  @@index([categoryId, status])
+  @@index([priority])
+  @@map("articles")
+}
+
+model ArticleImage {
+  id         String  @id @default(cuid())
+  articleId  String
+  url        String // /uploads/xxx.webp
+  originalUrl String?
+  alt        String?
+  width      Int?
+  height     Int?
+  bytes      Int?
+  position   Int     @default(0)
+  isCover    Boolean @default(false)
+  createdAt  DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@map("article_images")
+}
+
+// ============================ CLASIFICADOS ================================
+
+model Classified {
+  id          String           @id @default(cuid())
+  title       String
+  description String
+  price       Decimal?         @db.Decimal(12, 2)
+  currency    String           @default("ARS")
+  section     String           @default("Comunidad") // Empleos, Inmuebles, Vehiculos, Servicios...
+  contactName String
+  contactPhone String
+  contactEmail String?
+  locality    String           @default("Saladillo")
+  imageUrl    String? // Portada denormalizada (primera foto) para listados
+  images      ClassifiedImage[]
+  status      ClassifiedStatus @default(PENDING)
+  expiresAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([status, section])
+  @@index([status, expiresAt])
+  @@map("classifieds")
+}
+
+// Fotos de un aviso clasificado (hasta 3, validadas en la capa de servicio).
+model ClassifiedImage {
+  id           String   @id @default(cuid())
+  classifiedId String
+  url          String // /uploads/xxx.webp
+  width        Int?
+  height       Int?
+  bytes        Int?
+  position     Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  classified Classified @relation(fields: [classifiedId], references: [id], onDelete: Cascade)
+
+  @@index([classifiedId])
+  @@map("classified_images")
+}
+
+// ============================ SERVICIOS DE LA CIUDAD ======================
+
+model Pharmacy {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  shifts PharmacyShift[]
+
+  @@map("pharmacies")
+}
+
+model PharmacyShift {
+  id         String   @id @default(cuid())
+  pharmacyId String
+  date       DateTime @db.Date
+  note       String?
+  createdAt  DateTime @default(now())
+
+  pharmacy Pharmacy @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+
+  @@unique([pharmacyId, date])
+  @@index([date])
+  @@map("pharmacy_shifts")
+}
+
+// ============================ CONFIGURACION ===============================
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  // Si es true el valor se guarda cifrado (AES-256-GCM) y nunca se devuelve
+  // en texto plano al navegador.
+  isSecret  Boolean  @default(false)
+  group     String   @default("general")
+  updatedAt DateTime @updatedAt
+
+  @@index([group])
+  @@map("settings")
+}
+
+// ============================ PUBLICIDAD ==================================
+
+model Banner {
+  id          String     @id @default(cuid())
+  name        String
+  advertiser  String?
+  type        BannerType @default(IMAGE)
+  zone        BannerZone
+  imageUrl    String?
+  targetUrl   String?
+  htmlCode    String?
+  adSlot      String? // ID de bloque de AdSense
+  weight      Int        @default(1) // Peso para rotacion
+  isActive    Boolean    @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  impressions Int        @default(0)
+  clicks      Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([zone, isActive])
+  @@map("banners")
+}
+
+// ============================ SCRAPING ====================================
+
+model Source {
+  id             String       @id @default(cuid())
+  name           String
+  baseUrl        String
+  isActive       Boolean      @default(true)
+  status         SourceStatus @default(IDLE)
+
+  // Anti-bloqueo
+  rotateUserAgent Boolean @default(true)
+  requestDelayMs  Int     @default(1500)
+  maxItemsPerRun  Int     @default(20)
+  respectRobots   Boolean @default(true)
+  usePuppeteer    Boolean @default(false) // Sitios con JS pesado
+  crawlSelector   String? // Selector CSS del listado de notas
+  articleSelector String? // Selector CSS del cuerpo de la nota
+  titleSelector   String?
+  imageSelector   String?
+
+  scheduleCron String? // Ej: "0 */2 * * *" cada 2 horas
+  lastRunAt    DateTime?
+  lastError    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  mappings SourceCategoryMapping[]
+  jobs     ScrapeJob[]
+  items    ScrapedItem[]
+
+  @@map("sources")
+}
+
+model SourceCategoryMapping {
+  id                   String  @id @default(cuid())
+  sourceId             String
+  externalCategoryName String
+  externalCategoryUrl  String
+  localCategoryId      String
+  isActive             Boolean @default(true)
+  createdAt            DateTime @default(now())
+
+  source        Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  localCategory Category @relation(fields: [localCategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, externalCategoryUrl])
+  @@index([sourceId])
+  @@map("source_category_mappings")
+}
+
+model ScrapeJob {
+  id           String    @id @default(cuid())
+  sourceId     String
+  status       JobStatus @default(QUEUED)
+  trigger      String    @default("manual") // manual | cron
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  itemsFound   Int       @default(0)
+  itemsCreated Int       @default(0)
+  itemsSkipped Int       @default(0)
+  itemsFailed  Int       @default(0)
+  log          String    @default("") @db.Text
+  userId       String?
+
+  source Source        @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  user   User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items  ScrapedItem[]
+
+  @@index([sourceId, startedAt])
+  @@map("scrape_jobs")
+}
+
+model ScrapedItem {
+  id               String            @id @default(cuid())
+  jobId            String?
+  sourceId         String
+  externalCategory String?
+  title            String
+  url              String
+  rawContent       String?           @db.Text
+  rawImageUrl      String?
+  publishedAt      DateTime?
+  matchedKeywords  String[]          @default([])
+  priority         ArticlePriority   @default(NORMAL)
+  status           ScrapedItemStatus @default(PENDING)
+  error            String?
+  contentHash      String            @unique // Evita duplicados entre ejecuciones
+  createdAt        DateTime          @default(now())
+  processedAt      DateTime?
+
+  job     ScrapeJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  source  Source     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  article Article?   @relation("ScrapedItemArticle")
+
+  @@index([sourceId, status])
+  @@index([priority])
+  @@map("scraped_items")
+}
+
+// ============================ FILTRO LOCAL ================================
+
+model Keyword {
+  id        String      @id @default(cuid())
+  word      String      @unique
+  type      KeywordType @default(LOCALIDAD)
+  weight    Int         @default(10)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+
+  @@map("keywords")
+}
+
+// ============================ REDES SOCIALES ==============================
+
+model SocialChannel {
+  id          String        @id @default(cuid())
+  network     SocialNetwork
+  name        String
+  webhookUrl  String? // Make / Zapier / n8n
+  accessToken String? // Se cifra antes de guardar
+  chatId      String? // Telegram chat_id o FB Page ID
+  autoPublish Boolean       @default(false)
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  posts SocialPost[]
+
+  @@map("social_channels")
+}
+
+model SocialPost {
+  id        String           @id @default(cuid())
+  articleId String
+  channelId String
+  status    SocialPostStatus @default(PENDING)
+  payload   Json?
+  permalink String?
+  error     String?
+  sentAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  article Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  channel SocialChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, channelId])
+  @@index([status])
+  @@map("social_posts")
+}
+
+// ============================ NEWSLETTER ==================================
+
+enum NewsletterStatus {
+  ACTIVO   // Suscriptor activo, recibe boletines
+  DADO_DE_BAJA // Se dio de baja, no recibe más boletines
+}
+
+model NewsletterSubscriber {
+  id        String           @id @default(cuid())
+  email     String           @unique
+  name      String?
+  status    NewsletterStatus @default(ACTIVO)
+  source    String           @default("web") // web | admin | import
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  envios    NewsletterSend[]
+
+  @@index([email])
+  @@index([status])
+  @@map("newsletter_subscribers")
+}
+
+// ============================ COMENTARIOS ================================
+
+enum CommentStatus {
+  PENDING   // Enviado por un lector, esperando aprobacion del admin
+  APPROVED  // Visible en el publico
+  REJECTED  // Rechazado por el admin
+  SPAM      // Marcado como spam
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  articleId String
+  authorName String
+  authorEmail String?
+  content   String
+  status    CommentStatus @default(PENDING)
+  parentId  String? // Comentario padre para respuestas anidadas
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  article  Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  parent   Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies  Comment[] @relation("CommentReplies")
+
+  @@index([articleId, status])
+  @@index([parentId])
+  @@map("comments")
+}
+
+// ============================ NEWSLETTER ENVÍOS ==========================
+
+enum NewsletterCampaignStatus {
+  BORRADOR   // Campaña en edición, no se envió
+  PROGRAMADA // Lista para enviar en una fecha futura
+  ENVIADA    // Se envió completamente
+  ERROR      // Hubo errores en el envío
+  CANCELADA  // Cancelada antes de enviar
+}
+
+model NewsletterCampaign {
+  id          String                   @id @default(cuid())
+  titulo      String
+  asunto      String
+  contenido   String                   // HTML del boletín
+  tipo        String                   @default("resumen_diario") // resumen_diario | breaking | especial
+  status      NewsletterCampaignStatus @default(BORRADOR)
+  enviados    Int                      @default(0)
+  fallidos    Int                      @default(0)
+  totalSuscriptores Int               @default(0)
+  enviadoPor  String?
+  enviadoAt   DateTime?
+  programadoPara DateTime?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  envios      NewsletterSend[]
+
+  @@index([status])
+  @@index([programadoPara])
+  @@map("newsletter_campaigns")
+}
+
+model NewsletterSend {
+  id             String   @id @default(cuid())
+  campaignId     String
+  subscriberId   String
+  email          String
+  estado         String   @default("pendiente")
+  enviadoAt      DateTime?
+  error          String?
+  mensajeId      String?
+  createdAt      DateTime @default(now())
+
+  campaign NewsletterCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriber NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([subscriberId])
+  @@index([estado])
+  @@map("newsletter_sends")
+}
+
+// ============================ SEO Y LEGALES ================================
+
+model SiteSeo {
+  id              String   @id @default(cuid())
+  siteTitle       String   @default("Saladillo Noticias")
+  siteTagline     String   @default("El diario de nuestra ciudad")
+  metaTitle       String?
+  metaDescription String?
+  keywords        Json     @default("[]")
+  ogImage         String?
+  twitterCard     String   @default("summary_large_image")
+  googleAnalyticsId String?
+  googleSearchConsoleId String?
+  facebookPixelId String?
+  robots          String   @default("index, follow")
+  updatedAt       DateTime @updatedAt
+
+  @@map("site_seo")
+}
+
+model CookieConsent {
+  id        String   @id @default(cuid())
+  userId    String?
+  sessionId String
+  essential Boolean  @default(true)
+  analytics Boolean  @default(false)
+  marketing Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+  @@map("cookie_consents")
+}
+
+model LegalPage {
+  id          String   @id @default(cuid())
+  slug        String   @unique // privacidad, terminos, cookies, contacto
+  title       String
+  content     String   // HTML
+  metaTitle   String?
+  metaDescription String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@map("legal_pages")
+}
+
+// ============================ PAYWALL / SUSCRIPCIONES ======================
+
+enum SubscriptionPlanInterval {
+  MENSUAL
+  ANUAL
+}
+
+enum SubscriptionStatus {
+  ACTIVA
+  CANCELADA
+  EXPIRADA
+  PAUSA
+  PENDIENTE_PAGO
+}
+
+enum PaymentStatus {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+  REEMBOLSADO
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  nombre      String
+  descripcion String?
+  precio      Decimal  @db.Decimal(12, 2)
+  intervalo   SubscriptionPlanInterval @default(MENSUAL)
+  diasDuracion Int     @default(30)
+  caracteristicas Json   @default("[]")
+  esPopular   Boolean  @default(false)
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  suscripciones UserSubscription[]
+
+  @@index([activo, intervalo])
+  @@map("subscription_plans")
+}
+
+model UserSubscription {
+  id            String           @id @default(cuid())
+  userId        String
+  planId        String
+  status        SubscriptionStatus @default(PENDIENTE_PAGO)
+  startedAt     DateTime?
+  expiresAt     DateTime?
+  renovacionAuto Boolean        @default(true)
+  canceladoEn   DateTime?
+  motivoCancelacion String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id])
+  pagos    Payment[]
+
+  @@index([userId, status])
+  @@index([planId])
+  @@map("user_subscriptions")
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  subscriptionId String
+  monto        Decimal  @db.Decimal(12, 2)
+  moneda       String   @default("ARS")
+  estado       PaymentStatus @default(PENDIENTE)
+  proveedor    String   @default("mercadopago")
+  referenciaExterna String?
+  fechaPago    DateTime?
+  comprobanteUrl String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscription UserSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([estado])
+  @@map("payments")
+}
