@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireApiSession, UnauthorizedError } from '@/lib/auth';
 import { testAiConnection } from '@/lib/ai/provider';
-import type { AiProvider, AiSettings } from '@/lib/settings';
+import { getAiSettings, type AiProvider, type AiSettings } from '@/lib/settings';
 
 /**
  * Prueba de conexión con el proveedor de IA.
@@ -27,12 +27,21 @@ export async function POST(request: NextRequest) {
     if (typeof body.baseUrl === 'string') overrides.baseUrl = body.baseUrl.trim();
     if (typeof body.apiKey === 'string' && body.apiKey.trim()) overrides.apiKey = body.apiKey.trim();
 
-    // Log claro si no hay API Key configurada (posible problema de ENCRYPTION_KEY)
+    // Diagnóstico preciso: distinguimos entre "no se envió override" (normal) y
+    // "la clave guardada no se pudo descifrar" (ENCRYPTION_KEY distinta a la de cifrado).
     if (!overrides.apiKey) {
-      console.warn(
-        '[api/ia/probar] No se recibió API Key. Posible causa: ENCRYPTION_KEY no coincide ' +
-        'con la usada al cifrar la clave guardada en Supabase, o no hay clave configurada.'
-      );
+      const guardada = await getAiSettings();
+      if (!guardada.hasApiKey || !guardada.apiKey) {
+        console.warn(
+          '[api/ia/probar] La API Key guardada no está disponible o no se pudo descifrar. ' +
+          'Verificá que ENCRYPTION_KEY sea idéntica a la usada al guardarla en Supabase.'
+        );
+      } else {
+        console.info(
+          `[api/ia/probar] Probando con clave guardada. provider=${guardada.provider} ` +
+          `model=${guardada.model} baseUrl=${guardada.baseUrl} keyLen=${guardada.apiKey.length}`
+        );
+      }
     }
 
     const result = await testAiConnection(overrides);
