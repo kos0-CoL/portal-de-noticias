@@ -87,6 +87,7 @@ export default function IaSettingsForm({ initial, baseUrls, modelosSugeridos, wa
     sugeridos.includes(initial.model) ? initial.model : VALOR_OTRO
   );
   const [modeloLibre, setModeloLibre] = useState(initial.model);
+  const [extractModel, setExtractModel] = useState(initial.extractModel ?? '');
 
   const [apiKey, setApiKey] = useState('');
   const [maskedKey, setMaskedKey] = useState(initial.apiKeyMasked);
@@ -204,6 +205,7 @@ export default function IaSettingsForm({ initial, baseUrls, modelosSugeridos, wa
       const payload: Record<string, unknown> = {
         provider,
         model: modeloFinal,
+        extractModel: extractModel.trim(),
         baseUrl,
         defaultTonality,
         citeSource,
@@ -343,6 +345,28 @@ export default function IaSettingsForm({ initial, baseUrls, modelosSugeridos, wa
                 onChange={(e) => setModeloLibre(e.target.value)}
               />
             )}
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="label" htmlFor="ia-extract-model">
+              Modelo de extracción (scraping)
+            </label>
+            <input
+              id="ia-extract-model"
+              className="input"
+              list={modelosParaMostrar.length > 0 ? 'ia-extract-model-opciones' : undefined}
+              placeholder="Si se deja vacío, usa el modelo general"
+              value={extractModel}
+              onChange={(e) => setExtractModel(e.target.value)}
+            />
+            <datalist id="ia-extract-model-opciones">
+              {modelosParaMostrar.map((m) => (
+                <option key={m.id} value={m.id} />
+              ))}
+            </datalist>
+            <p className="mt-1 text-xs text-news-500">
+              Se usa para extraer el cuerpo de las notas en las fuentes que tengan activada la extracción por IA.
+            </p>
           </div>
 
           <div className="sm:col-span-2">

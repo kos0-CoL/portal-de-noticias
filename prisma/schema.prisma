@@ -369,6 +369,7 @@ model Source {
   maxItemsPerRun  Int     @default(20)
   respectRobots   Boolean @default(true)
   usePuppeteer    Boolean @default(false) // Sitios con JS pesado
+  useAiExtraction Boolean @default(false) // Extraer el cuerpo de la nota con IA en vez de selectores
   crawlSelector   String? // Selector CSS del listado de notas
   articleSelector String? // Selector CSS del cuerpo de la nota
   titleSelector   String?

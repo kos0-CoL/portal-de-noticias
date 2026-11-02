@@ -169,7 +169,7 @@ const FRASES_DESCARTE = [
 ];
 
 /** Zonas que nunca forman parte del cuerpo de la nota. */
-const CONTENEDORES_DESCARTE = 'nav, footer, header, aside, form, script, style, iframe, noscript, .comentarios, .related, .relacionadas, .publicidad, .ad';
+export const CONTENEDORES_DESCARTE = 'nav, footer, header, aside, form, script, style, iframe, noscript, .comentarios, .related, .relacionadas, .publicidad, .ad';
 
 function limpiarTitulo(texto: string): string {
   return texto.replace(/\s+/g, ' ').trim();

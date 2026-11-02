@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireApiSession, UnauthorizedError } from '@/lib/auth';
 import { fetchHtml } from '@/lib/scraper/fetcher';
 import { parseArticle } from '@/lib/scraper/parser';
+import { extractArticleWithAi } from '@/lib/ai/extract';
 import { loadLocalKeywords, matchLocalKeywords } from '@/lib/scraper/keywords';
 
 export const dynamic = 'force-dynamic';
@@ -52,11 +53,15 @@ export async function POST(request: NextRequest) {
       usePuppeteer: fuente?.usePuppeteer ?? false
     });
 
-    const parsed = await parseArticle(html, datos.url, {
-      articleSelector: fuente?.articleSelector ?? null,
-      titleSelector: fuente?.titleSelector ?? null,
-      imageSelector: fuente?.imageSelector ?? null
-    });
+    // Si la fuente tiene activada la extracción por IA se la usa directamente:
+    // en el preview conviene ver el error del modelo y no un fallback silencioso.
+    const parsed = fuente?.useAiExtraction
+      ? await extractArticleWithAi(html, datos.url)
+      : await parseArticle(html, datos.url, {
+          articleSelector: fuente?.articleSelector ?? null,
+          titleSelector: fuente?.titleSelector ?? null,
+          imageSelector: fuente?.imageSelector ?? null
+        });
 
     const keywords = await loadLocalKeywords();
     const filtro = matchLocalKeywords(`${parsed.title}\n${parsed.content}`, keywords);

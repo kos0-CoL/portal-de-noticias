@@ -11,6 +11,7 @@ import { TONALIDADES } from '@/lib/constants';
 export const SETTING_KEYS = {
   aiProvider: 'ai.provider',
   aiModel: 'ai.model',
+  aiExtractModel: 'ai.extractModel',
   aiBaseUrl: 'ai.baseUrl',
   aiApiKey: 'ai.apiKey',
   aiDefaultTonality: 'ai.defaultTonality',
@@ -33,6 +34,8 @@ export type AiProvider = 'openai' | 'openrouter' | 'groq' | 'anthropic' | 'gemin
 export interface AiSettings {
   provider: AiProvider;
   model: string;
+  /** Modelo opcional para la extracción del cuerpo en el scraper. Vacío = usa `model`. */
+  extractModel: string;
   baseUrl: string;
   /** Clave en texto plano, solo para uso interno del servidor. */
   apiKey: string;
@@ -56,6 +59,7 @@ export interface WatermarkSettings {
 export const DEFAULTS = {
   [SETTING_KEYS.aiProvider]: process.env.AI_PROVIDER ?? 'openai',
   [SETTING_KEYS.aiModel]: process.env.AI_MODEL ?? 'gpt-4o-mini',
+  [SETTING_KEYS.aiExtractModel]: process.env.AI_EXTRACT_MODEL ?? '',
   [SETTING_KEYS.aiBaseUrl]: process.env.AI_BASE_URL ?? '',
   [SETTING_KEYS.aiApiKey]: process.env.AI_API_KEY ?? '',
   [SETTING_KEYS.aiDefaultTonality]: 'CERCANO_LOCAL',
@@ -128,10 +132,11 @@ export async function setSetting(key: string, value: unknown, opts?: { secret?: 
 }
 
 export async function getAiSettings(): Promise<AiSettings> {
-  const [provider, model, baseUrl, apiKey, defaultTonality, citeSource, rewriteEnabled, temperature, systemPrompt] =
+  const [provider, model, extractModel, baseUrl, apiKey, defaultTonality, citeSource, rewriteEnabled, temperature, systemPrompt] =
     await Promise.all([
       getSetting<string>(SETTING_KEYS.aiProvider),
       getSetting<string>(SETTING_KEYS.aiModel),
+      getSetting<string>(SETTING_KEYS.aiExtractModel),
       getSetting<string>(SETTING_KEYS.aiBaseUrl),
       getSetting<string>(SETTING_KEYS.aiApiKey),
       getSetting<string>(SETTING_KEYS.aiDefaultTonality),
@@ -145,6 +150,7 @@ export async function getAiSettings(): Promise<AiSettings> {
   return {
     provider: (provider ?? 'openai') as AiProvider,
     model: model ?? 'gpt-4o-mini',
+    extractModel: extractModel ?? '',
     baseUrl: baseUrl ?? BASE_URLS[(provider ?? 'openai') as AiProvider],
     apiKey: key,
     apiKeyMasked: key ? maskSecret(key) : '',
@@ -161,6 +167,11 @@ export async function getAiSettings(): Promise<AiSettings> {
 export async function getAiSettingsForClient(): Promise<AiSettings> {
   const s = await getAiSettings();
   return { ...s, apiKey: '' };
+}
+
+/** Modelo a usar para extraer el cuerpo de las notas: el dedicado o, si no hay, el general. */
+export function resolveExtractModel(settings: AiSettings): string {
+  return settings.extractModel.trim() || settings.model;
 }
 
 export async function getWatermarkSettings(): Promise<WatermarkSettings> {

@@ -27,6 +27,7 @@ export interface FuenteInicial {
   maxItemsPerRun: number;
   respectRobots: boolean;
   usePuppeteer: boolean;
+  useAiExtraction: boolean;
   crawlSelector: string | null;
   articleSelector: string | null;
   titleSelector: string | null;
@@ -120,6 +121,7 @@ export default function SourceForm({ categorias, initial = null }: SourceFormPro
   const [requestDelayMs, setRequestDelayMs] = useState(initial?.requestDelayMs ?? 1500);
   const [respectRobots, setRespectRobots] = useState(initial?.respectRobots ?? true);
   const [usePuppeteer, setUsePuppeteer] = useState(initial?.usePuppeteer ?? false);
+  const [useAiExtraction, setUseAiExtraction] = useState(initial?.useAiExtraction ?? false);
 
   const [maxItemsPerRun, setMaxItemsPerRun] = useState(initial?.maxItemsPerRun ?? 20);
 
@@ -185,6 +187,7 @@ export default function SourceForm({ categorias, initial = null }: SourceFormPro
       maxItemsPerRun: Number(maxItemsPerRun) || 1,
       respectRobots,
       usePuppeteer,
+      useAiExtraction,
       crawlSelector: crawlSelector.trim() || null,
       articleSelector: articleSelector.trim() || null,
       titleSelector: titleSelector.trim() || null,
@@ -439,6 +442,20 @@ export default function SourceForm({ categorias, initial = null }: SourceFormPro
               <span className="font-semibold">Renderizar con navegador (Puppeteer)</span>
               <br />
               Para sitios con mucho JavaScript. Es más lento y requiere que Puppeteer esté instalado; si no lo está, se usa el método normal automáticamente.
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-news-700">
+            <input
+              type="checkbox"
+              className="checkbox mt-0.5"
+              checked={useAiExtraction}
+              onChange={(evento) => setUseAiExtraction(evento.target.checked)}
+            />
+            <span>
+              <span className="font-semibold">Extraer el cuerpo con IA</span>
+              <br />
+              La IA lee el HTML de cada nota y saca título, cuerpo, imágenes y fecha. Útil cuando los selectores no dan
+              resultado. Consume tokens y omite la reescritura automática: la nota queda como borrador para revisar.
             </span>
           </label>
           <div>

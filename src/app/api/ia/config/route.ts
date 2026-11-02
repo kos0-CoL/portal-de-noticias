@@ -15,6 +15,7 @@ const POSICIONES = ['southeast', 'southwest', 'northeast', 'northwest', 'center'
 const configSchema = z.object({
   provider: z.enum(PROVEEDORES).optional(),
   model: z.string().trim().optional(),
+  extractModel: z.string().trim().optional(),
   baseUrl: z.string().trim().optional(),
   defaultTonality: z.enum(TONOS).optional(),
   citeSource: z.boolean().optional(),
@@ -61,6 +62,7 @@ async function guardarConfiguracion(request: NextRequest) {
 
   if (data.provider) tareas.push(setSetting(SETTING_KEYS.aiProvider, data.provider, grupoIa));
   if (data.model !== undefined) tareas.push(setSetting(SETTING_KEYS.aiModel, data.model, grupoIa));
+  if (data.extractModel !== undefined) tareas.push(setSetting(SETTING_KEYS.aiExtractModel, data.extractModel, grupoIa));
   if (data.baseUrl !== undefined) tareas.push(setSetting(SETTING_KEYS.aiBaseUrl, data.baseUrl, grupoIa));
   if (data.defaultTonality) tareas.push(setSetting(SETTING_KEYS.aiDefaultTonality, data.defaultTonality, grupoIa));
   if (data.citeSource !== undefined) tareas.push(setSetting(SETTING_KEYS.aiCiteSource, data.citeSource, grupoIa));

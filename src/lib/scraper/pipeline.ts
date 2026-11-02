@@ -2,9 +2,10 @@ import { prisma } from '@/lib/prisma';
 import { countWords, estimateReadingTime, slugify, stableHash } from '@/lib/utils';
 import { getAiSettings, getWatermarkSettings } from '@/lib/settings';
 import { fetchHtml, isAllowedByRobots } from '@/lib/scraper/fetcher';
-import { discoverArticleLinks, parseArticle } from '@/lib/scraper/parser';
+import { discoverArticleLinks, parseArticle, type ParsedArticle } from '@/lib/scraper/parser';
 import { loadLocalKeywords, matchLocalKeywords } from '@/lib/scraper/keywords';
 import { rewriteArticleById } from '@/lib/ai/rewrite';
+import { extractArticleWithAi } from '@/lib/ai/extract';
 
 /**
  * Orquestador del scraping.
@@ -59,6 +60,38 @@ async function slugUnico(titulo: string): Promise<string> {
     }
   }
   return candidato;
+}
+
+/**
+ * Extrae la nota con IA o con selectores según la configuración de la fuente.
+ * Si la extracción por IA falla, se registra el motivo y se cae a `parseArticle`
+ * para no perder la nota.
+ */
+async function extraerNota(
+  html: string,
+  url: string,
+  source: {
+    useAiExtraction: boolean;
+    articleSelector: string | null;
+    titleSelector: string | null;
+    imageSelector: string | null;
+  },
+  registrar: (icono: string, mensaje: string) => void
+): Promise<ParsedArticle> {
+  if (source.useAiExtraction) {
+    try {
+      return await extractArticleWithAi(html, url);
+    } catch (error) {
+      const mensaje = error instanceof Error ? error.message : 'Error desconocido';
+      registrar('!', `La extracción por IA falló (${mensaje}). Se reintenta con selectores.`);
+    }
+  }
+
+  return parseArticle(html, url, {
+    articleSelector: source.articleSelector,
+    titleSelector: source.titleSelector,
+    imageSelector: source.imageSelector
+  });
 }
 
 /**
@@ -184,11 +217,7 @@ export async function runSource(sourceId: string, opts: RunSourceOptions = {}): 
                   timeoutMs: 30000
                 });
 
-                const parsed = await parseArticle(notaHtml, link.url, {
-                  articleSelector: source.articleSelector,
-                  titleSelector: source.titleSelector,
-                  imageSelector: source.imageSelector
-                });
+                const parsed = await extraerNota(notaHtml, link.url, source, registrar);
 
                 const coincidencia = matchLocalKeywords(`${parsed.title}\n${parsed.content}`, keywords);
 
@@ -234,8 +263,10 @@ export async function runSource(sourceId: string, opts: RunSourceOptions = {}): 
                   data: { status: 'PROCESSED', article: { connect: { id: article.id } }, processedAt: new Date() }
                 });
 
-                const ai = await getAiSettings();
-                if (ai.rewriteEnabled && ai.hasApiKey) {
+                // Con extracción por IA la nota queda como la devolvió el modelo:
+                // no se reescribe, la acomoda el editor en el flujo de redacción.
+                const ai = source.useAiExtraction ? null : await getAiSettings();
+                if (ai && ai.rewriteEnabled && ai.hasApiKey) {
                   try {
                     await rewriteArticleById(article.id, {
                       tonality: (ai.defaultTonality as import('@/lib/ai/tones').AiTonalityValue) ?? 'INFORMATIVO_NEUTRAL',
@@ -305,11 +336,7 @@ export async function runSource(sourceId: string, opts: RunSourceOptions = {}): 
             usePuppeteer: source.usePuppeteer
           });
 
-          const parsed = await parseArticle(notaHtml, link.url, {
-            articleSelector: source.articleSelector,
-            titleSelector: source.titleSelector,
-            imageSelector: source.imageSelector
-          });
+          const parsed = await extraerNota(notaHtml, link.url, source, registrar);
 
           const coincidencia = matchLocalKeywords(`${parsed.title}\n${parsed.content}`, keywords);
 
@@ -358,8 +385,10 @@ export async function runSource(sourceId: string, opts: RunSourceOptions = {}): 
 
           // Reescritura automática con IA si está habilitada en la configuración.
           // Usa el tono por defecto definido en /admin/ia (ai.defaultTonality).
-          const ai = await getAiSettings();
-          if (ai.rewriteEnabled && ai.hasApiKey) {
+          // Se saltea cuando la nota la extrajo la IA: ya viene del modelo y la
+          // acomoda el editor en el flujo de redacción.
+          const ai = source.useAiExtraction ? null : await getAiSettings();
+          if (ai && ai.rewriteEnabled && ai.hasApiKey) {
             try {
               await rewriteArticleById(article.id, {
                 tonality: (ai.defaultTonality as import('@/lib/ai/tones').AiTonalityValue) ?? 'INFORMATIVO_NEUTRAL',

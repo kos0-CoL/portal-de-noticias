@@ -44,6 +44,7 @@ export default async function FuentesPage({ searchParams }: PageProps) {
         maxItemsPerRun: fuenteEditar.maxItemsPerRun,
         respectRobots: fuenteEditar.respectRobots,
         usePuppeteer: fuenteEditar.usePuppeteer,
+        useAiExtraction: fuenteEditar.useAiExtraction,
         crawlSelector: fuenteEditar.crawlSelector,
         articleSelector: fuenteEditar.articleSelector,
         titleSelector: fuenteEditar.titleSelector,

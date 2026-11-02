@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getAiSettings } from '@/lib/settings';
 import { countWords, estimateReadingTime, escapeHtml, sanitizeHtml, similarity, slugify, stripHtml, truncate } from '@/lib/utils';
 import { chatComplete, type ChatMessage } from '@/lib/ai/provider';
+import { extractJsonObject } from '@/lib/ai/json';
 import { systemPromptFor, userPromptFor, type AiTonalityValue, type RewriteInput } from '@/lib/ai/tones';
 
 /**
@@ -47,48 +48,6 @@ const respuestaIaSchema = z.object({
   imageAlt: z.string().catch('')
 });
 
-/**
- * Extrae el primer objeto JSON valido del texto devuelto por la IA.
- * Tolerante a ```json ... ``` y a texto suelto alrededor del objeto.
- */
-function extractJsonObject(raw: string): string {
-  let text = raw.trim();
-
-  const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(text);
-  if (fence) text = fence[1].trim();
-
-  try {
-    JSON.parse(text);
-    return text;
-  } catch {
-    /* sigue con la extraccion manual */
-  }
-
-  const start = text.indexOf('{');
-  if (start >= 0) {
-    let depth = 0;
-    let inString = false;
-    let escaped = false;
-    for (let i = start; i < text.length; i++) {
-      const char = text[i];
-      if (inString) {
-        if (escaped) escaped = false;
-        else if (char === '\\') escaped = true;
-        else if (char === '"') inString = false;
-        continue;
-      }
-      if (char === '"') inString = true;
-      else if (char === '{') depth++;
-      else if (char === '}') {
-        depth--;
-        if (depth === 0) return text.slice(start, i + 1);
-      }
-    }
-  }
-
-  throw new Error('La IA no devolvió un JSON válido. Volvé a intentar la reescritura.');
-}
-
 /** Limpia y normaliza el HTML que devuelve el modelo. */
 function normalizarHtml(html: string): string {
   return sanitizeHtml(html.replace(/```html|```/gi, '').trim());
@@ -120,7 +79,7 @@ export async function rewriteArticle(input: RewriteInput): Promise<RewriteResult
 
   let parsedJson: unknown;
   try {
-    parsedJson = JSON.parse(extractJsonObject(raw));
+    parsedJson = JSON.parse(extractJsonObject(raw, 'Volvé a intentar la reescritura.'));
   } catch (error) {
     throw new Error(
       error instanceof Error && error.message.includes('JSON')
