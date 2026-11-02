@@ -1,9 +1,18 @@
 type ClassValue = string | number | null | undefined | false | ClassValue[];
 
+function flatten(items: ClassValue[], out: (string | number | null | undefined | false)[]): void {
+  for (const item of items) {
+    if (Array.isArray(item)) flatten(item, out);
+    else out.push(item);
+  }
+}
+
 /** Une clases condicionales: cn('p-2', activo && 'bg-brand-800') */
 export function cn(...inputs: ClassValue[]): string {
+  const flat: (string | number | null | undefined | false)[] = [];
+  flatten(inputs, flat);
   const out: string[] = [];
-  for (const item of inputs.flat(Infinity) as (string | number | null | undefined | false)[]) {
+  for (const item of flat) {
     if (typeof item === 'string' && item.trim()) out.push(item);
   }
   return out.join(' ');
