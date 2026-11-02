@@ -128,7 +128,7 @@ export async function GET(request: Request) {
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
-          _count: { select: { envíos: true } },
+          _count: { select: { envios: true } },
         },
       }),
       prisma.newsletterCampaign.count({ where }),
