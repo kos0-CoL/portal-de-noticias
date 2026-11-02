@@ -291,7 +291,7 @@ export default function AdminNewsletterPage() {
               className="rounded border-news-300 text-brand-600 focus:ring-brand-500"
             />
             <label className="text-sm text-news-700 cursor-pointer">
-              Enviar ahora a {totalSuscriptores ?? 0} suscriptor(es) activo(s)
+              Enviar ahora a {data?.total ?? 0} suscriptor(es) activo(s)
             </label>
           </div>
 
