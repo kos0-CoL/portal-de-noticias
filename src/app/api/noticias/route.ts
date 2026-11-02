@@ -53,10 +53,19 @@ async function uniqueSlug(base: string, excludeId?: string): Promise<string> {
 }
 
 function buildTagConnect(names: string[] | undefined) {
-  const clean = Array.from(new Set((names ?? []).map((n) => n.trim()).filter(Boolean)));
-  return clean.map((name) => ({
-    where: { name },
-    create: { name, slug: slugify(name) || name.toLowerCase() }
+  // La unique `Tag.slug` se deriva del nombre, así que dos variantes con distinta
+  // tilde (ej. "Premios Goñi" y "Premios Goni") comparten slug: deduplicamos por
+  // slug y conectamos por slug para no chocar con la restricción única.
+  const porSlug = new Map<string, string>();
+  for (const name of names ?? []) {
+    const limpio = name.trim();
+    if (!limpio) continue;
+    const slug = slugify(limpio) || limpio.toLowerCase();
+    if (!porSlug.has(slug)) porSlug.set(slug, limpio);
+  }
+  return Array.from(porSlug, ([slug, name]) => ({
+    where: { slug },
+    create: { name, slug }
   }));
 }
 
