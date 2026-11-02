@@ -87,9 +87,9 @@ function escapeXml(text: string): string {
     .replace(/'/g, '&apos;');
 }
 
-function uploadsRoot(): string {
-  const pathMod = require('path');
-  return pathMod.join(process.cwd(), 'public', 'uploads');
+async function uploadsRoot(): Promise<string> {
+  const { join } = await pathModule();
+  return join(process.cwd(), 'public', 'uploads');
 }
 
 /** Guarda un buffer en /public/uploads/<yyyy-mm>/<hash>.<ext> y devuelve la url. */
@@ -99,7 +99,7 @@ async function saveBuffer(buffer: Buffer, ext: string): Promise<string> {
   const pathMod = await pathModule();
   const now = new Date();
   const folder = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const dir = pathMod.join(uploadsRoot(), folder);
+  const dir = pathMod.join(await uploadsRoot(), folder);
   await mkdir(dir, { recursive: true });
   const hash = createHash('sha256').update(buffer).digest('hex').slice(0, 24);
   const fileName = `${hash}.${ext}`;

@@ -30,6 +30,18 @@ const nextConfig = {
         ]
       }
     ];
+  },
+
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      crypto: false,
+      path: false,
+      child_process: false,
+      'fs/promises': false,
+    };
+    return config;
   }
 };
 
