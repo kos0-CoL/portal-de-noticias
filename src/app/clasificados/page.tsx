@@ -55,9 +55,9 @@ export default async function ClasificadosPage({ searchParams }: Props) {
         ? [
             {
               OR: [
-                { title: { contains: busqueda, mode: 'insensitive' } },
-                { description: { contains: busqueda, mode: 'insensitive' } },
-                { locality: { contains: busqueda, mode: 'insensitive' } }
+                { title: { contains: busqueda, mode: 'insensitive' as const } },
+                { description: { contains: busqueda, mode: 'insensitive' as const } },
+                { locality: { contains: busqueda, mode: 'insensitive' as const } }
               ]
             }
           ]
