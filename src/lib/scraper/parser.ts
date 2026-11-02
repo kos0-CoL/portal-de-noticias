@@ -1,4 +1,4 @@
-import { load } from 'cheerio';
+import { load, type Cheerio } from 'cheerio';
 import { countWords, sanitizeHtml, stripHtml, truncate } from '@/lib/utils';
 
 /**
@@ -194,26 +194,50 @@ export async function parseArticle(
   if (!title) title = limpiarTitulo($('title').text());
 
   // ---- Contenedor del cuerpo ----
-  let container = opts.articleSelector ? $(opts.articleSelector).first() : $();
-  if (!container || container.length === 0) {
-    const candidatos = $('article, div');
-    let mejorIndice = -1;
-    let mejorCantidad = 0;
-    candidatos.each((i, el) => {
-      const cantidad = $(el).find('p').length;
-      if (cantidad > mejorCantidad) {
-        mejorCantidad = cantidad;
-        mejorIndice = i;
-      }
-    });
-    container = mejorIndice >= 0 ? candidatos.eq(mejorIndice) : $('body');
+  let container: Cheerio<any> | null = null;
+  if (opts.articleSelector) {
+    container = $(opts.articleSelector).first();
   }
 
-  container.find(CONTENEDORES_DESCARTE).remove();
+  // Si no hay selector explícito, probamos contenedores típicos de WordPress
+  // (InfoSaladillo usa este tipo de estructura) y caemos al mejor <div>/<article>.
+  if (!container || container.length === 0) {
+    const selectoresCuerpo = [
+      '.entry-content', '.post-content', '.article-content', '.content',
+      '.single-content', '.note-content', '.nota-contenido', '.entry',
+      'article', 'main'
+    ];
+    let encontrado = $();
+    for (const sel of selectoresCuerpo) {
+      const cand = $(sel).first();
+      if (cand.length > 0 && cand.find('p').length > 0) {
+        encontrado = cand;
+        break;
+      }
+    }
+    if (encontrado.length > 0) {
+      container = encontrado;
+    } else {
+      const candidatos = $('article, div');
+      let mejorIndice = -1;
+      let mejorCantidad = 0;
+      candidatos.each((i, el) => {
+        const cantidad = $(el as any).find('p').length;
+        if (cantidad > mejorCantidad) {
+          mejorCantidad = cantidad;
+          mejorIndice = i;
+        }
+      });
+      container = mejorIndice >= 0 ? candidatos.eq(mejorIndice) : $('body');
+    }
+  }
+
+  const contenedor = container ?? $('body');
+  contenedor.find(CONTENEDORES_DESCARTE).remove();
 
   // ---- Párrafos ----
   const holder = $('<div></div>');
-  container.find('p').each((_, el) => {
+  contenedor.find('p').each((_, el) => {
     const $p = $(el);
     const texto = $p.text().replace(/\s+/g, ' ').trim();
     if (texto.length < 40) return;
@@ -228,7 +252,7 @@ export async function parseArticle(
 
   // ---- Imágenes ----
   const images: string[] = [];
-  const nodosImagen = opts.imageSelector ? $(opts.imageSelector) : container.find('img');
+  const nodosImagen = opts.imageSelector ? $(opts.imageSelector) : contenedor.find('img');
   nodosImagen.each((_, el) => {
     if (images.length >= 6) return;
     const $img = $(el);
