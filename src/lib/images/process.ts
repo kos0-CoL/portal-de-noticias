@@ -1,7 +1,16 @@
-import { createHash } from 'crypto';
-import { mkdir, readFile, writeFile } from 'fs/promises';
-import path from 'path';
 import { prisma } from '@/lib/prisma';
+
+async function fsPromises() {
+  return import('fs/promises');
+}
+
+async function cryptoModule() {
+  return import('crypto');
+}
+
+async function pathModule() {
+  return import('path');
+}
 import { getSetting, getWatermarkSettings, SETTING_KEYS, type WatermarkSettings } from '@/lib/settings';
 
 /**
@@ -79,18 +88,22 @@ function escapeXml(text: string): string {
 }
 
 function uploadsRoot(): string {
-  return path.join(process.cwd(), 'public', 'uploads');
+  const pathMod = require('path');
+  return pathMod.join(process.cwd(), 'public', 'uploads');
 }
 
 /** Guarda un buffer en /public/uploads/<yyyy-mm>/<hash>.<ext> y devuelve la url. */
 async function saveBuffer(buffer: Buffer, ext: string): Promise<string> {
+  const { mkdir, readFile, writeFile } = await fsPromises();
+  const { createHash } = await cryptoModule();
+  const pathMod = await pathModule();
   const now = new Date();
   const folder = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const dir = path.join(uploadsRoot(), folder);
+  const dir = pathMod.join(uploadsRoot(), folder);
   await mkdir(dir, { recursive: true });
   const hash = createHash('sha256').update(buffer).digest('hex').slice(0, 24);
   const fileName = `${hash}.${ext}`;
-  await writeFile(path.join(dir, fileName), buffer);
+  await writeFile(pathMod.join(dir, fileName), buffer);
   return `/uploads/${folder}/${fileName}`;
 }
 
@@ -103,7 +116,9 @@ async function loadLogoBuffer(logoUrl: string): Promise<Buffer | null> {
       return Buffer.from(await response.arrayBuffer());
     }
     if (logoUrl.startsWith('/')) {
-      const localPath = path.join(process.cwd(), 'public', logoUrl.replace(/^\//, ''));
+      const { join } = await import('path');
+      const { readFile } = await import('fs/promises');
+      const localPath = join(process.cwd(), 'public', logoUrl.replace(/^\//, ''));
       return await readFile(localPath);
     }
   } catch (error) {
@@ -309,7 +324,8 @@ export async function processRemoteImage(src: string, opts?: ProcessImageOptions
  */
 export async function processUploadedImage(buffer: Buffer, originalName: string, opts?: ProcessImageOptions): Promise<ProcessedImage> {
   const { maxWidth, quality, watermark } = await resolveOptions(opts);
-  const ext = (path.extname(originalName).replace('.', '') || 'bin').toLowerCase();
+  const { extname } = await import('path');
+  const ext = (extname(originalName).replace('.', '') || 'bin').toLowerCase();
 
   const sharp = await getSharp();
   if (!sharp) {
