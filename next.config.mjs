@@ -12,7 +12,7 @@ const nextConfig = {
   },
   experimental: {
     // sharp se usa del lado servidor para redimensionar / marca de agua
-    serverComponentsExternalPackages: ['sharp', 'cheerio', 'fs', 'crypto', 'path', 'child_process', 'detect-libc'],
+    serverComponentsExternalPackages: ['sharp', 'cheerio', 'fs', 'crypto', 'path', 'child_process', 'detect-libc', 'node:child_process', 'node:crypto', 'node:os', 'node:path', 'node:stream'],
     // Habilita src/instrumentation.ts, donde se enciende el planificador de scraping
     instrumentationHook: true,
     // Las Server Actions del panel suben fotos de avisos (hasta 3 de 6 MB):
@@ -40,6 +40,11 @@ const nextConfig = {
       path: false,
       child_process: false,
       'fs/promises': false,
+      'node:child_process': false,
+      'node:crypto': false,
+      'node:os': false,
+      'node:path': false,
+      'node:stream': false,
     };
     return config;
   }
