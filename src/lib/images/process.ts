@@ -1,17 +1,17 @@
 import { prisma } from '@/lib/prisma';
-
-async function fsPromises() {
-  return import('fs/promises');
-}
+import { getSetting, getWatermarkSettings, SETTING_KEYS, type WatermarkSettings } from '@/lib/settings';
 
 async function cryptoModule() {
   return import('crypto');
 }
 
+async function fsPromises() {
+  return import('fs/promises');
+}
+
 async function pathModule() {
   return import('path');
 }
-import { getSetting, getWatermarkSettings, SETTING_KEYS, type WatermarkSettings } from '@/lib/settings';
 
 /**
  * Procesamiento de imagenes con sharp: descarga, redimensiona, aplica marca de
@@ -75,7 +75,7 @@ async function getSharp(): Promise<SharpFactory | null> {
 }
 
 function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
+  return Math.min(max, Math.min(value, max));
 }
 
 function escapeXml(text: string): string {
@@ -94,7 +94,7 @@ function uploadsRoot(): string {
 
 /** Guarda un buffer en /public/uploads/<yyyy-mm>/<hash>.<ext> y devuelve la url. */
 async function saveBuffer(buffer: Buffer, ext: string): Promise<string> {
-  const { mkdir, readFile, writeFile } = await fsPromises();
+  const { mkdir, writeFile } = await fsPromises();
   const { createHash } = await cryptoModule();
   const pathMod = await pathModule();
   const now = new Date();
@@ -116,8 +116,8 @@ async function loadLogoBuffer(logoUrl: string): Promise<Buffer | null> {
       return Buffer.from(await response.arrayBuffer());
     }
     if (logoUrl.startsWith('/')) {
-      const { join } = await import('path');
-      const { readFile } = await import('fs/promises');
+      const { join } = await pathModule();
+      const { readFile } = await fsPromises();
       const localPath = join(process.cwd(), 'public', logoUrl.replace(/^\//, ''));
       return await readFile(localPath);
     }
@@ -156,7 +156,6 @@ async function buildOverlay(
       try {
         const logoWidth = Math.max(40, Math.round(targetWidth * 0.25));
         const resizedLogo = await sharp(logoBuffer).resize({ width: logoWidth, withoutEnlargement: true }).ensureAlpha().png().toBuffer();
-        // Se aplica la opacidad multiplicando el canal alfa con un tapiz uniforme.
         const withOpacity = await sharp(resizedLogo)
           .composite([
             {
@@ -297,7 +296,6 @@ export async function processRemoteImage(src: string, opts?: ProcessImageOptions
 
   const sharp = await getSharp();
   if (!sharp) {
-    // Modo degradado: se devuelve la URL original sin procesar.
     return { url: src, originalUrl: src, width: 0, height: 0, bytes: original.byteLength, format: 'original' };
   }
 
@@ -324,7 +322,7 @@ export async function processRemoteImage(src: string, opts?: ProcessImageOptions
  */
 export async function processUploadedImage(buffer: Buffer, originalName: string, opts?: ProcessImageOptions): Promise<ProcessedImage> {
   const { maxWidth, quality, watermark } = await resolveOptions(opts);
-  const { extname } = await import('path');
+  const { extname } = await pathModule();
   const ext = (extname(originalName).replace('.', '') || 'bin').toLowerCase();
 
   const sharp = await getSharp();
@@ -389,7 +387,6 @@ export async function replaceArticleImages(articleId: string, remoteUrls: string
       console.warn(`[imágenes] Se salteó la imagen ${remoteUrl} de la nota ${articleId}.`, error);
     }
 
-    // Pequeño delay entre descargas para no golpear los servidores de origen.
     if (index < remoteUrls.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 300));
     }

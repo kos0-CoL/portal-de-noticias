@@ -1,4 +1,6 @@
-import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
+async function cryptoModule() {
+  return import('crypto');
+}
 
 /**
  * Cifrado simetrico para credenciales sensibles (API Keys de IA, tokens de
@@ -10,14 +12,13 @@ import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypt
 const ALGO = 'aes-256-gcm';
 const VERSION = 'v1';
 
-function getKey(): Buffer {
+async function getKey(): Promise<Buffer> {
   const raw = process.env.ENCRYPTION_KEY;
   if (!raw) {
     throw new Error(
       'Falta la variable de entorno ENCRYPTION_KEY. Generá una con: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
     );
   }
-  // Acepta hex de 64 caracteres, base64 o cualquier string (se deriva con SHA-256).
   if (/^[0-9a-fA-F]{64}$/.test(raw)) return Buffer.from(raw, 'hex');
   try {
     const b64 = Buffer.from(raw, 'base64');
@@ -25,11 +26,13 @@ function getKey(): Buffer {
   } catch {
     /* no es base64 valido, se deriva */
   }
+  const { createHash } = await cryptoModule();
   return createHash('sha256').update(raw).digest();
 }
 
-export function encryptSecret(plain: string): string {
-  const key = getKey();
+export async function encryptSecret(plain: string): Promise<string> {
+  const key = await getKey();
+  const { randomBytes, createCipheriv } = await cryptoModule();
   const iv = randomBytes(12);
   const cipher = createCipheriv(ALGO, key, iv);
   const enc = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
@@ -37,12 +40,13 @@ export function encryptSecret(plain: string): string {
   return [VERSION, iv.toString('hex'), tag.toString('hex'), enc.toString('hex')].join(':');
 }
 
-export function decryptSecret(payload: string): string {
+export async function decryptSecret(payload: string): Promise<string> {
   if (!payload.startsWith(`${VERSION}:`)) return '';
   const [, ivHex, tagHex, dataHex] = payload.split(':');
   if (!ivHex || !tagHex || !dataHex) return '';
   try {
-    const decipher = createDecipheriv(ALGO, getKey(), Buffer.from(ivHex, 'hex'));
+    const { createDecipheriv } = await cryptoModule();
+    const decipher = createDecipheriv(ALGO, await getKey(), Buffer.from(ivHex, 'hex'));
     decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
     return Buffer.concat([
       decipher.update(Buffer.from(dataHex, 'hex')),
@@ -53,7 +57,6 @@ export function decryptSecret(payload: string): string {
   }
 }
 
-/** Devuelve una version enmascarada para mostrar en el panel: sk-...9f2a */
 export function maskSecret(plain: string): string {
   if (!plain) return '';
   if (plain.length <= 8) return '••••••••';

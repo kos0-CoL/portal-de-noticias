@@ -104,7 +104,7 @@ async function readRaw(key: string): Promise<unknown> {
   const row = await prisma.setting.findUnique({ where: { key } });
   if (!row) return undefined;
   if (row.isSecret && typeof row.value === 'string') {
-    return decryptSecret(row.value);
+    return await decryptSecret(row.value);
   }
   return row.value;
 }
@@ -119,7 +119,7 @@ export async function getSetting<T = unknown>(key: string): Promise<T | undefine
 
 export async function setSetting(key: string, value: unknown, opts?: { secret?: boolean; group?: string }) {
   const secret = opts?.secret ?? SECRET_KEYS.includes(key);
-  const stored = secret ? encryptSecret(String(value)) : (value as object);
+  const stored = secret ? await encryptSecret(String(value)) : (value as object);
   return prisma.setting.upsert({
     where: { key },
     create: { key, value: stored as object, isSecret: secret, group: opts?.group ?? 'general' },
