@@ -37,8 +37,10 @@ const EXTENSIONES_ARCHIVO = /\.(pdf|jpe?g|png|gif|webp|svg|zip|rar|mp4|mp3|docx?
 
 /**
  * Descubre los links a notas dentro de un listado.
- * Si `selector` está definido, se lo usa como contenedor del listado; si no,
- * aplica un heurístico sobre todos los `<a>` de la página.
+ * Estrategia por capas para InfoSaladillo:
+ *  1) <h2> y <h3> que contengan un <a> (títulos destacados y del listado).
+ *  2) Cualquier <a> cuyo href sea un slug de nota (path con guiones, 1 o más segmentos).
+ * Si `selector` está definido, se lo usa como contenedor del listado.
  */
 export async function discoverArticleLinks(
   html: string,
@@ -59,6 +61,8 @@ export async function discoverArticleLinks(
 
   /**
    * Valida y agrega un link candidato si pasa los filtros de URL y texto.
+   * Relajado para InfoSaladillo: acepta paths de un solo segmento si son slugs
+   * (contienen guiones) o coinciden con pistas de nota.
    */
   function agregarLink(href: string, texto: string): void {
     if (!href || href.startsWith('#')) return;
@@ -76,9 +80,14 @@ export async function discoverArticleLinks(
 
     const path = absoluta.pathname || '';
     if (!path || path === '/') return;
+
     const segmentos = path.split('/').filter(Boolean);
     const tienePista = PISTAS_NOTA.some((pista) => path.toLowerCase().includes(pista));
-    if (segmentos.length < 2 && !tienePista) return;
+
+    // InfoSaladillo usa slugs con guiones (ej: /registro-de-lluvias-en-saladillo/).
+    // Aceptamos paths de 1+ segmento si tienen pista de nota O parecen slug (guiones).
+    const esSlugInfoSaladillo = /-[a-z0-9]+-?[a-z0-9]*/i.test(segmentos[segmentos.length - 1] ?? '');
+    if (!tienePista && !esSlugInfoSaladillo && segmentos.length < 2) return;
 
     const titulo = texto.replace(/\s+/g, ' ').trim();
     if (titulo.length <= 25) return;
@@ -89,8 +98,7 @@ export async function discoverArticleLinks(
     links.push({ url, title: titulo });
   }
 
-  // Estrategia InfoSaladillo: los títulos de las notas están en <h2> (destacados)
-  // y <h3> (resto del listado), cada uno conteniendo un <a> con el enlace.
+  // Capa 1: <h2> y <h3> que contengan un <a> (títulos destacados y del listado).
   $('h2, h3').each((_, el) => {
     if (links.length >= 60) return false;
     const $h = $(el);
@@ -101,9 +109,24 @@ export async function discoverArticleLinks(
     agregarLink(href, texto);
   });
 
-  // Si hay un selector de contenedor definido, también extraemos <a> directos de ahí.
-  if (selector) {
-    const anclas = $(selector).find('a').toArray().concat($(selector).filter('a').toArray());
+  // Capa 2: si aún no hay links, buscar <a> que envuelvan imágenes con alt (común en portadas).
+  if (links.length === 0 && !selector) {
+    $('a > img[alt]').each((_, el) => {
+      if (links.length >= 60) return false;
+      const $img = $(el);
+      const $a = $img.parent('a');
+      if ($a.length === 0) return;
+      const href = ($a.attr('href') ?? '').trim();
+      const texto = ($img.attr('alt') ?? '').replace(/\s+/g, ' ').trim();
+      agregarLink(href, texto);
+    });
+  }
+
+  // Capa 3: fallback a <a> directos con texto significativo si aún nada.
+  if (links.length === 0) {
+    const anclas = selector
+      ? $(selector).find('a').toArray().concat($(selector).filter('a').toArray())
+      : $('a').toArray();
     for (const el of anclas) {
       if (links.length >= 60) break;
       const $a = $(el);
@@ -111,15 +134,6 @@ export async function discoverArticleLinks(
       const texto = $a.text().replace(/\s+/g, ' ').trim();
       agregarLink(href, texto);
     }
-  } else {
-    // Fallback: <a> sueltos de toda la página.
-    $('a').toArray().forEach((el) => {
-      if (links.length >= 60) return;
-      const $a = $(el);
-      const href = ($a.attr('href') ?? '').trim();
-      const texto = $a.text().replace(/\s+/g, ' ').trim();
-      agregarLink(href, texto);
-    });
   }
 
   return links.slice(0, 60);
