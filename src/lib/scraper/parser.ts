@@ -298,8 +298,10 @@ export async function parseArticle(
   if (!title) {
     throw new Error('No se pudo extraer el título de la nota. Probá definiendo un selector de título en la fuente.');
   }
+  // Umbral bajo a propósito: InfoSaladillo publica boletines muy breves
+  // (avisos, agradecimientos, cortes de energía) que rondan las 49-118 palabras.
   const palabras = countWords(contentHtml);
-  if (palabras < 120) {
+  if (palabras < 40) {
     throw new Error(
       `El cuerpo de la nota tiene muy poco texto (${palabras} palabras): probablemente no sea una nota o el selector del cuerpo esté mal configurado.`
     );

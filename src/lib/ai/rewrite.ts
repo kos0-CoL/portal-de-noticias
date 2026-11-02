@@ -217,6 +217,16 @@ export async function rewriteArticleById(
     const wordCount = countWords(result.content);
     const readingTime = estimateReadingTime(result.content);
 
+    // La unique `Tag.slug` se deriva del nombre, así que dos escrituras distintas
+    // (ej. "Premios Goñi" y "Premios Goni") comparten slug. Buscamos por slug y
+    // deduplicamos por slug para no chocar con la restricción única.
+    const etiquetasPorSlug = new Map<string, string>();
+    for (const name of result.tags) {
+      const slug = slugify(name);
+      if (!slug || etiquetasPorSlug.has(slug)) continue;
+      etiquetasPorSlug.set(slug, name);
+    }
+
     await prisma.article.update({
       where: { id: articleId },
       data: {
@@ -236,9 +246,9 @@ export async function rewriteArticleById(
         readingTime,
         tags: {
           set: [],
-          connectOrCreate: result.tags.map((name) => ({
-            where: { name },
-            create: { name, slug: slugify(name) }
+          connectOrCreate: Array.from(etiquetasPorSlug, ([slug, name]) => ({
+            where: { slug },
+            create: { name, slug }
           }))
         }
       }
