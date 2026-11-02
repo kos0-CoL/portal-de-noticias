@@ -75,12 +75,15 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data;
+    const accessToken = data.accessToken?.trim()
+      ? await encryptSecret(data.accessToken.trim())
+      : null;
     const canal = await prisma.socialChannel.create({
       data: {
         network: data.network as SocialNetwork,
         name: data.name,
         webhookUrl: data.webhookUrl ? data.webhookUrl : null,
-        accessToken: data.accessToken?.trim() ? encryptSecret(data.accessToken.trim()) : null,
+        accessToken,
         chatId: data.chatId ?? null,
         autoPublish: data.autoPublish ?? false,
         isActive: data.isActive ?? true
