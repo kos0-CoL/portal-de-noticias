@@ -6,7 +6,7 @@ const nextConfig = {
     // antes de guardarse en /public/uploads, pero dejamos remotos permitidos
     // para los banners externos que cargue el administrador.
     remotePatterns: [
-      { protocol: 'https', hostname: 'picsum.photos', pathname: '/seed/**' }
+      { protocol: 'https', hostname: 'picsum.photos', pathname: '/**' }
     ],
     formats: ['image/webp']
   },
