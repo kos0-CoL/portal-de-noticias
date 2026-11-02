@@ -57,44 +57,69 @@ export async function discoverArticleLinks(
   const links: DiscoveredLink[] = [];
   const vistos = new Set<string>();
 
-  const anclas = selector
-    ? $(selector).find('a').toArray().concat($(selector).filter('a').toArray())
-    : $('a').toArray();
-
-  for (const el of anclas) {
-    if (links.length >= 60) break;
-
-    const $a = $(el);
-    const href = ($a.attr('href') ?? '').trim();
-    if (!href) continue;
-    if (href.startsWith('#')) continue;
-    if (/^(mailto:|tel:|javascript:|data:)/i.test(href)) continue;
-    if (EXTENSIONES_ARCHIVO.test(href)) continue;
+  /**
+   * Valida y agrega un link candidato si pasa los filtros de URL y texto.
+   */
+  function agregarLink(href: string, texto: string): void {
+    if (!href || href.startsWith('#')) return;
+    if (/^(mailto:|tel:|javascript:|data:)/i.test(href)) return;
+    if (EXTENSIONES_ARCHIVO.test(href)) return;
 
     let absoluta: URL;
     try {
       absoluta = new URL(href, pageUrl);
     } catch {
-      continue;
+      return;
     }
-    if (absoluta.protocol !== 'http:' && absoluta.protocol !== 'https:') continue;
-    // Solo links internos del mismo sitio: los externos no nos interesan.
-    if (host && absoluta.hostname !== host) continue;
+    if (absoluta.protocol !== 'http:' && absoluta.protocol !== 'https:') return;
+    if (host && absoluta.hostname !== host) return;
 
     const path = absoluta.pathname || '';
-    if (!path || path === '/') continue;
+    if (!path || path === '/') return;
     const segmentos = path.split('/').filter(Boolean);
     const tienePista = PISTAS_NOTA.some((pista) => path.toLowerCase().includes(pista));
-    // Heurístico: al menos 2 segmentos o un path con pinta de nota.
-    if (segmentos.length < 2 && !tienePista) continue;
+    if (segmentos.length < 2 && !tienePista) return;
 
-    const texto = $a.text().replace(/\s+/g, ' ').trim();
-    if (texto.length <= 25) continue;
+    const titulo = texto.replace(/\s+/g, ' ').trim();
+    if (titulo.length <= 25) return;
 
     const url = absoluta.toString().split('#')[0];
-    if (vistos.has(url)) continue;
+    if (vistos.has(url)) return;
     vistos.add(url);
-    links.push({ url, title: texto });
+    links.push({ url, title: titulo });
+  }
+
+  // Estrategia InfoSaladillo: los títulos de las notas están en <h2> (destacados)
+  // y <h3> (resto del listado), cada uno conteniendo un <a> con el enlace.
+  $('h2, h3').each((_, el) => {
+    if (links.length >= 60) return false;
+    const $h = $(el);
+    const $a = $h.find('a').first();
+    if ($a.length === 0) return;
+    const href = ($a.attr('href') ?? '').trim();
+    const texto = $h.text().replace(/\s+/g, ' ').trim();
+    agregarLink(href, texto);
+  });
+
+  // Si hay un selector de contenedor definido, también extraemos <a> directos de ahí.
+  if (selector) {
+    const anclas = $(selector).find('a').toArray().concat($(selector).filter('a').toArray());
+    for (const el of anclas) {
+      if (links.length >= 60) break;
+      const $a = $(el);
+      const href = ($a.attr('href') ?? '').trim();
+      const texto = $a.text().replace(/\s+/g, ' ').trim();
+      agregarLink(href, texto);
+    }
+  } else {
+    // Fallback: <a> sueltos de toda la página.
+    $('a').toArray().forEach((el) => {
+      if (links.length >= 60) return;
+      const $a = $(el);
+      const href = ($a.attr('href') ?? '').trim();
+      const texto = $a.text().replace(/\s+/g, ' ').trim();
+      agregarLink(href, texto);
+    });
   }
 
   return links.slice(0, 60);
