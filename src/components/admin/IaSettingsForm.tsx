@@ -1,10 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Loader2, Save, Trash2, Zap } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Filter, Loader2, RefreshCw, Save, Trash2, Zap } from 'lucide-react';
 import type { AiProvider, AiSettings, WatermarkSettings } from '@/lib/settings';
 import { TONALIDADES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+
+interface ModeloDisponible {
+  id: string;
+  name: string;
+  gratuito: boolean;
+}
 
 /**
  * Formulario de configuración de IA (/admin/ia).
@@ -107,11 +113,57 @@ export default function IaSettingsForm({ initial, baseUrls, modelosSugeridos, wa
   const [mensaje, setMensaje] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
   const [resultadoPrueba, setResultadoPrueba] = useState<ProbarResultado | null>(null);
 
+  const [modelosDisponibles, setModelosDisponibles] = useState<ModeloDisponible[]>([]);
+  const [cargandoModelos, setCargandoModelos] = useState(false);
+  const [soloGratuitos, setSoloGratuitos] = useState(false);
+
+  const modelosParaMostrar = useMemo(() => {
+    if (provider === 'openrouter' && modelosDisponibles.length > 0) {
+      return soloGratuitos ? modelosDisponibles.filter((m) => m.gratuito) : modelosDisponibles;
+    }
+    return sugeridos.map((id) => ({ id, name: id, gratuito: false }));
+  }, [provider, modelosDisponibles, soloGratuitos, sugeridos]);
+
   const modeloFinal = modeloSeleccionado === VALOR_OTRO ? modeloLibre.trim() : modeloSeleccionado;
+
+  async function cargarModelos() {
+    setCargandoModelos(true);
+    setResultadoPrueba(null);
+    try {
+      const url = new URL('/api/ia/modelos', window.location.origin);
+      url.searchParams.set('provider', provider);
+      if (soloGratuitos) url.searchParams.set('free', 'true');
+
+      const response = await fetch(url.toString(), { method: 'GET' });
+      const data = (await response.json()) as {
+        ok: boolean;
+        modelos?: ModeloDisponible[];
+        gratuitos?: number;
+        error?: string;
+      };
+
+      if (!data.ok || !data.modelos) {
+        throw new Error(data.error ?? 'No se pudieron cargar los modelos.');
+      }
+
+      setModelosDisponibles(data.modelos);
+      const primero = data.modelos[0];
+      if (primero) {
+        setModeloSeleccionado(primero.id);
+        setModeloLibre(primero.id);
+      }
+    } catch {
+      setMensaje({ tipo: 'error', texto: 'No se pudieron cargar los modelos de OpenRouter.' });
+    } finally {
+      setCargandoModelos(false);
+    }
+  }
 
   function cambiarProveedor(nuevo: AiProvider) {
     setProvider(nuevo);
     setBaseUrl(baseUrls[nuevo] ?? '');
+    setModelosDisponibles([]);
+    setSoloGratuitos(false);
     const lista = modelosSugeridos[nuevo] ?? [];
     if (lista.length > 0) {
       setModeloSeleccionado(lista.includes(semillaModelo) ? semillaModelo : lista[0]);
@@ -237,9 +289,38 @@ export default function IaSettingsForm({ initial, baseUrls, modelosSugeridos, wa
             </select>
           </div>
 
-          <div>
-            <label className="label" htmlFor="ia-model">
+          <div className="sm:col-span-2">
+            <label className="flex items-center gap-2">
               Modelo
+              {provider === 'openrouter' && (
+                <>
+                  <button
+                    type="button"
+                    className="text-xs text-news-500 hover:text-brand-600 underline"
+                    onClick={() => setSoloGratuitos((p) => !p)}
+                  >
+                    {soloGratuitos ? 'Ver todos' : 'Solo gratis'}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs text-news-500 hover:text-brand-600 underline ml-2"
+                    onClick={cargarModelos}
+                    disabled={cargandoModelos}
+                  >
+                    {cargandoModelos ? (
+                      <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" aria-hidden />
+                    )}
+                    {' Cargar modelos'}
+                  </button>
+                  {modelosDisponibles.length > 0 && (
+                    <span className="text-xs text-news-500">
+                      ({modelosDisponibles.filter((m) => m.gratuito).length} gratis de {modelosDisponibles.length})
+                    </span>
+                  )}
+                </>
+              )}
             </label>
             <select
               id="ia-model"
@@ -247,9 +328,9 @@ export default function IaSettingsForm({ initial, baseUrls, modelosSugeridos, wa
               value={modeloSeleccionado}
               onChange={(e) => setModeloSeleccionado(e.target.value)}
             >
-              {sugeridos.map((m) => (
-                <option key={m} value={m}>
-                  {m}
+              {modelosParaMostrar.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}{m.gratuito ? ' (gratis)' : ''}
                 </option>
               ))}
               <option value={VALOR_OTRO}>Otro (escribir manualmente)</option>

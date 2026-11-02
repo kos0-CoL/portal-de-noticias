@@ -61,12 +61,23 @@ async function requestChat(messages: ChatMessage[], opts: ChatOptions, settings:
   const timeout = setTimeout(() => controller.abort(), 60_000);
 
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${settings.apiKey}`
+    };
+
+    // Headers recomendados por OpenRouter para identificar el origen de la peticion.
+    if (settings.provider === 'openrouter') {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+      if (siteUrl) {
+        headers['HTTP-Referer'] = siteUrl;
+        headers['X-Title'] = new URL(siteUrl).hostname;
+      }
+    }
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${settings.apiKey}`
-      },
+      headers,
       body: JSON.stringify({
         model,
         messages,
