@@ -2,9 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    // Las imagenes que descarga el scraper se optimizan y se convierten a WebP
-    // antes de guardarse en /public/uploads, pero dejamos remotos permitidos
-    // para los banners externos que cargue el administrador.
+    // El portal muestra imágenes propias (/public/uploads, ya en WebP) y de
+    // terceros (notas scrapeadas, links pegados a mano en el panel). El
+    // optimizador de Vercel rechaza con 400 INVALID_IMAGE_OPTIMIZE_REQUEST toda
+    // URL remota que no esté en remotePatterns, así que se desactiva y cada
+    // navegador trae la imagen directo desde su origen.
+    unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'picsum.photos', pathname: '/**' }
     ],
