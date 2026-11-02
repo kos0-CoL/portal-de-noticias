@@ -26,7 +26,15 @@ export interface ChatOptions {
 
 /** Forma parcial de la respuesta de Chat Completions que nos interesa leer. */
 interface ChatCompletionResponse {
-  choices?: Array<{ message?: { content?: string } }>;
+  choices?: Array<{
+    message?: {
+      content?: string;
+      /** Algunos modelos (sobre todo los "reasoning") emiten aqui sus tokens de razonamiento. */
+      reasoning?: string;
+    };
+    /** "stop" | "length" | "content_filter" | ... Motivo por el que el modelo dejo de generar. */
+    finish_reason?: string;
+  }>;
   error?: { message?: string };
 }
 
@@ -111,14 +119,37 @@ async function requestChat(messages: ChatMessage[], opts: ChatOptions, settings:
       throw new Error('La respuesta del proveedor de IA no es un JSON válido.');
     }
 
-    const content = data.choices?.[0]?.message?.content;
+    // OpenRouter puede responder HTTP 200 con un objeto `error` en el cuerpo
+    // (por ejemplo, rate limiting) en vez de un codigo de error HTTP.
+    if (data.error?.message) {
+      throw new Error(
+        `El proveedor de IA devolvió un error: ${truncate(data.error.message.trim() || 'sin detalle', 400)}`
+      );
+    }
+
+    const choice = data.choices?.[0];
+    const content = choice?.message?.content;
     if (typeof content !== 'string' || !content.trim()) {
+      const finishReason = choice?.finish_reason;
+      const emitioRazonamiento = Boolean(choice?.message?.reasoning?.trim());
       console.warn(
-        '[ai/provider] Contenido vacío de OpenRouter. Status:',
+        '[ai/provider] Contenido vacío. Status:',
         response.status,
+        'finish_reason:',
+        finishReason,
+        'emitioRazonamiento:',
+        emitioRazonamiento,
         'Cuerpo:',
         rawText.slice(0, 1000)
       );
+
+      if (finishReason === 'length' || emitioRazonamiento) {
+        throw new Error(
+          'El proveedor de IA devolvió una respuesta vacía porque el modelo agotó el límite de tokens ' +
+          '(típico de los modelos de razonamiento, que gastan tokens antes de escribir texto). ' +
+          'Probá de nuevo o elegí un modelo que no razone.'
+        );
+      }
       throw new Error('El proveedor de IA devolvió una respuesta vacía. Probá de nuevo o cambiá de modelo.');
     }
     return content.trim();
@@ -169,7 +200,11 @@ export async function testAiConnection(
         { role: 'system', content: 'Sos un asistente técnico. Respondés de forma extremadamente breve.' },
         { role: 'user', content: 'Respondé únicamente con la palabra OK' }
       ],
-      { maxTokens: 8, temperature: 0 },
+      // maxTokens holgado: los modelos de razonamiento (muchos ":free" de
+      // OpenRouter) consumen tokens de "reasoning" antes de escribir la
+      // respuesta, así que un tope chico devuelve content vacío y hace fallar
+      // la prueba sin que la cuenta ni la clave tengan problemas.
+      { maxTokens: 512, temperature: 0 },
       merged
     );
 
