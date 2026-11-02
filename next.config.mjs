@@ -12,7 +12,7 @@ const nextConfig = {
   },
   experimental: {
     // sharp se usa del lado servidor para redimensionar / marca de agua
-    serverComponentsExternalPackages: ['sharp', 'cheerio'],
+    serverComponentsExternalPackages: ['sharp', 'cheerio', 'fs', 'crypto', 'path'],
     // Habilita src/instrumentation.ts, donde se enciende el planificador de scraping
     instrumentationHook: true,
     // Las Server Actions del panel suben fotos de avisos (hasta 3 de 6 MB):
