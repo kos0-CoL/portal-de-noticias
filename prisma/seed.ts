@@ -12,6 +12,17 @@ import { SITE } from '../src/lib/constants';
 
 const prisma = new PrismaClient();
 
+/** Hash estable y determinista de un string (usa el código de caracteres). */
+function stableHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
+  }
+  return hash;
+}
+
 /** Genera una URL de imagen placeholder para las notas de ejemplo. */
 function img(prompt: string, size: 'landscape_4_3' | 'square' | 'landscape_16_9' = 'landscape_4_3') {
   const dims = size === 'square' ? '400x400' : size === 'landscape_16_9' ? '800x450' : '800x600';
