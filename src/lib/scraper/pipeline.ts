@@ -219,7 +219,7 @@ export async function runSource(sourceId: string, opts: RunSourceOptions = {}): 
 
           await prisma.scrapedItem.update({
             where: { id: item.id },
-            data: { status: 'PROCESSED', articleId: article.id, processedAt: new Date() }
+            data: { status: 'PROCESSED', article: { connect: { id: article.id } }, processedAt: new Date() }
           });
 
           // Reescritura automática con IA si está habilitada en la configuración.
