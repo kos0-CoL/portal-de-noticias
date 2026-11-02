@@ -45,7 +45,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     // Solo se re-cifra el token si el usuario escribió uno nuevo.
     let accessTokenData: { accessToken?: string | null } = {};
     if (data.accessToken !== undefined) {
-      accessTokenData = { accessToken: data.accessToken && data.accessToken.trim() ? encryptSecret(data.accessToken.trim()) : null };
+      const trimmed = data.accessToken?.trim();
+      accessTokenData = { accessToken: trimmed ? await encryptSecret(trimmed) : null };
     }
 
     const canal = await prisma.socialChannel.update({
