@@ -12,7 +12,7 @@ const filtroSchema = z.object({
 
 export async function GET(request: Request) {
   const session = await getSession();
-  if (!session?.user) {
+  if (!session) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
