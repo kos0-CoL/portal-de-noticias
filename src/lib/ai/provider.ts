@@ -107,11 +107,18 @@ async function requestChat(messages: ChatMessage[], opts: ChatOptions, settings:
     try {
       data = JSON.parse(rawText) as ChatCompletionResponse;
     } catch {
+      console.warn('[ai/provider] Respuesta no JSON de OpenRouter:', rawText.slice(0, 500));
       throw new Error('La respuesta del proveedor de IA no es un JSON válido.');
     }
 
     const content = data.choices?.[0]?.message?.content;
     if (typeof content !== 'string' || !content.trim()) {
+      console.warn(
+        '[ai/provider] Contenido vacío de OpenRouter. Status:',
+        response.status,
+        'Cuerpo:',
+        rawText.slice(0, 1000)
+      );
       throw new Error('El proveedor de IA devolvió una respuesta vacía. Probá de nuevo o cambiá de modelo.');
     }
     return content.trim();
