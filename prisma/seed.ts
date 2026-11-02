@@ -307,8 +307,6 @@ const NOTAS: SeedArticle[] = [
     hoursAgo: 70,
     tags: ['Polvaredas', 'Ruta 51', 'Policiales', 'Tránsito'],
     tonality: AiTonality.INFORMATIVO_NEUTRAL,
-    sourceName: 'Diario Regional Zona Sur',
-    sourceUrl: 'https://ejemplo-regional.com.ar/policiales/volco-camion-ruta-51',
     fromScraper: {
       source: 'Diario Regional Zona Sur',
       url: 'https://ejemplo-regional.com.ar/policiales/volco-camion-ruta-51'
@@ -497,8 +495,6 @@ async function main() {
         isFeatured: Boolean(nota.featured),
         isBreaking: Boolean(nota.breaking),
         publishedAt,
-        sourceName: nota.sourceName ?? null,
-        sourceUrl: nota.sourceUrl ?? null,
         aiTonality: nota.tonality ?? AiTonality.INFORMATIVO_NEUTRAL,
         aiRewritten: Boolean(nota.fromScraper),
         aiModel: nota.fromScraper ? 'gpt-4o-mini (simulado)' : null,
@@ -523,7 +519,7 @@ async function main() {
           status: 'PROCESSED',
           contentHash: `seed-${slug(nota.title)}`,
           processedAt: new Date(),
-          articleId: created.id
+          article: { connect: { id: created.id } }
         }
       });
     }
