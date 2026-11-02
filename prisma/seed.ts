@@ -12,9 +12,11 @@ import { SITE } from '../src/lib/constants';
 
 const prisma = new PrismaClient();
 
-/** Genera una URL de imagen real para las notas de ejemplo. */
+/** Genera una URL de imagen placeholder para las notas de ejemplo. */
 function img(prompt: string, size: 'landscape_4_3' | 'square' | 'landscape_16_9' = 'landscape_4_3') {
-  return `https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=${encodeURIComponent(prompt)}&image_size=${size}`;
+  const dims = size === 'square' ? '400x400' : size === 'landscape_16_9' ? '800x450' : '800x600';
+  const seed = Math.abs(stableHash(prompt)) % 1000;
+  return `https://picsum.photos/seed/${seed}/${dims}`;
 }
 
 function slug(s: string) {
