@@ -27,6 +27,14 @@ export async function POST(request: NextRequest) {
     if (typeof body.baseUrl === 'string') overrides.baseUrl = body.baseUrl.trim();
     if (typeof body.apiKey === 'string' && body.apiKey.trim()) overrides.apiKey = body.apiKey.trim();
 
+    // Log claro si no hay API Key configurada (posible problema de ENCRYPTION_KEY)
+    if (!overrides.apiKey) {
+      console.warn(
+        '[api/ia/probar] No se recibió API Key. Posible causa: ENCRYPTION_KEY no coincide ' +
+        'con la usada al cifrar la clave guardada en Supabase, o no hay clave configurada.'
+      );
+    }
+
     const result = await testAiConnection(overrides);
     return NextResponse.json({ ok: result.ok, result });
   } catch (error) {
