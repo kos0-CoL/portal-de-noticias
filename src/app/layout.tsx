@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Source_Serif_4 } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import { prisma } from '@/lib/prisma';
 import { SITE } from '@/lib/constants';
 import { CookieConsentBanner } from '@/components/public/CookieConsentBanner';
@@ -8,13 +8,6 @@ import './globals.css';
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
-  display: 'swap'
-});
-
-const editorial = Source_Serif_4({
-  subsets: ['latin'],
-  weight: ['600', '700'],
-  variable: '--font-editorial',
   display: 'swap'
 });
 
@@ -55,7 +48,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-AR" className={`${inter.variable} ${editorial.variable}`}>
+    <html lang="es-AR" className={inter.variable}>
       <body className="min-h-screen font-sans">
         {children}
         <CookieConsentBanner />
