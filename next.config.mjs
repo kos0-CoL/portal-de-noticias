@@ -46,6 +46,16 @@ const nextConfig = {
       'node:path': false,
       'node:stream': false,
     };
+    config.externals = [
+      ...(Array.isArray(config.externals) ? config.externals : []),
+      'sharp',
+      'node:child_process',
+      'node:crypto',
+      'node:os',
+      'node:path',
+      'node:stream',
+      'detect-libc',
+    ];
     return config;
   }
 };
