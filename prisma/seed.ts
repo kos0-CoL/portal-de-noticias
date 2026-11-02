@@ -25,7 +25,7 @@ function stableHash(str: string): number {
 
 /** Genera una URL de imagen placeholder para las notas de ejemplo. */
 function img(prompt: string, size: 'landscape_4_3' | 'square' | 'landscape_16_9' = 'landscape_4_3') {
-  const dims = size === 'square' ? '400x400' : size === 'landscape_16_9' ? '800x450' : '800x600';
+  const dims = size === 'square' ? '400/400' : size === 'landscape_16_9' ? '800/450' : '800/600';
   const seed = Math.abs(stableHash(prompt)) % 1000;
   return `https://picsum.photos/seed/${seed}/${dims}`;
 }
