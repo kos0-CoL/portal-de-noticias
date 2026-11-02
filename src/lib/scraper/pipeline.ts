@@ -125,6 +125,7 @@ export async function runSource(sourceId: string, opts: RunSourceOptions = {}): 
       }
 
       let listadoHtml: string;
+      let usoPuppeteerFallback = false;
       try {
         listadoHtml = await fetchHtml(listadoUrl, {
           rotateUserAgent: source.rotateUserAgent,
@@ -139,6 +140,139 @@ export async function runSource(sourceId: string, opts: RunSourceOptions = {}): 
       }
 
       const links = await discoverArticleLinks(listadoHtml, listadoUrl, source.crawlSelector);
+
+      // Fallback automático: si fetch nativo no devolvió links (posible desafío
+      // anti-bot / Cloudflare), reintentar con Puppeteer + stealth para render
+      // el HTML real y extraer los enlaces.
+      if (links.length === 0 && source.usePuppeteer !== true) {
+        registrar('·', `Fallback a Puppeteer para «${mapping.externalCategoryName}» (0 links con fetch nativo).`);
+        try {
+          const htmlPuppeteer = await fetchHtml(listadoUrl, {
+            rotateUserAgent: true,
+            delayMs: source.requestDelayMs,
+            usePuppeteer: true,
+            timeoutMs: 30000
+          });
+          const linksPuppeteer = await discoverArticleLinks(htmlPuppeteer, listadoUrl, source.crawlSelector);
+          if (linksPuppeteer.length > 0) {
+            registrar('✓', `Se encontraron ${linksPuppeteer.length} links candidatos (Puppeteer) en «${mapping.externalCategoryName}».`);
+            found += linksPuppeteer.length;
+            // Reemplazamos links y seguimos el flujo normal del bucle de abajo.
+            // Nota: `found` ya se sumó arriba; el bucle original también sumaría,
+            // así lo ajustamos para no duplicar.
+            for (const link of linksPuppeteer) {
+              if (created >= maxItems) break;
+              try {
+                const hash = stableHash(link.url);
+                const slugPosible = slugify(link.title);
+                const [itemExistente, articuloPorUrl, articuloPorSlug] = await Promise.all([
+                  prisma.scrapedItem.findUnique({ where: { contentHash: hash }, select: { id: true } }),
+                  prisma.article.findFirst({ where: { sourceUrl: link.url }, select: { id: true } }),
+                  slugPosible
+                    ? prisma.article.findFirst({ where: { slug: slugPosible }, select: { id: true } })
+                    : Promise.resolve(null)
+                ]);
+                if (itemExistente || articuloPorUrl || articuloPorSlug) {
+                  skipped += 1;
+                  continue;
+                }
+
+                const notaHtml = await fetchHtml(link.url, {
+                  rotateUserAgent: true,
+                  delayMs: source.requestDelayMs,
+                  usePuppeteer: true,
+                  timeoutMs: 30000
+                });
+
+                const parsed = await parseArticle(notaHtml, link.url, {
+                  articleSelector: source.articleSelector,
+                  titleSelector: source.titleSelector,
+                  imageSelector: source.imageSelector
+                });
+
+                const coincidencia = matchLocalKeywords(`${parsed.title}\n${parsed.content}`, keywords);
+
+                const item = await prisma.scrapedItem.create({
+                  data: {
+                    jobId: job.id,
+                    sourceId: source.id,
+                    externalCategory: mapping.externalCategoryName,
+                    title: parsed.title,
+                    url: link.url,
+                    rawContent: parsed.contentHtml,
+                    rawImageUrl: parsed.images[0] ?? null,
+                    publishedAt: parsed.publishedAt,
+                    matchedKeywords: coincidencia.matches,
+                    priority: coincidencia.priority,
+                    status: 'PENDING',
+                    contentHash: hash
+                  }
+                });
+
+                const article = await prisma.article.create({
+                  data: {
+                    title: parsed.title,
+                    slug: await slugUnico(parsed.title),
+                    summary: parsed.excerpt || null,
+                    content: parsed.contentHtml,
+                    coverImage: parsed.images[0] ?? null,
+                    status: 'PENDING_REVIEW',
+                    priority: coincidencia.priority,
+                    sourceName: source.name,
+                    sourceUrl: link.url,
+                    sourcePublishedAt: parsed.publishedAt,
+                    scrapedItemId: item.id,
+                    categoryId: mapping.localCategoryId,
+                    authorId: opts.trigger === 'manual' ? opts.userId ?? null : null,
+                    wordCount: countWords(parsed.contentHtml),
+                    readingTime: estimateReadingTime(parsed.contentHtml)
+                  }
+                });
+
+                await prisma.scrapedItem.update({
+                  where: { id: item.id },
+                  data: { status: 'PROCESSED', article: { connect: { id: article.id } }, processedAt: new Date() }
+                });
+
+                const ai = await getAiSettings();
+                if (ai.rewriteEnabled && ai.hasApiKey) {
+                  try {
+                    await rewriteArticleById(article.id, {
+                      tonality: (ai.defaultTonality as import('@/lib/ai/tones').AiTonalityValue) ?? 'INFORMATIVO_NEUTRAL',
+                      citeSource: ai.citeSource,
+                      save: true
+                    });
+                    registrar('✓', `Nota reescrita por IA con tono ${ai.defaultTonality}: «${parsed.title}»`);
+                  } catch (error) {
+                    const mensaje = error instanceof Error ? error.message : 'Error desconocido';
+                    registrar('!', `La IA no pudo reescribir «${parsed.title}»: ${mensaje}. Queda como borrador sin reescribir.`);
+                  }
+                }
+
+                if (parsed.images.length > 0) {
+                  creadosConImagenes.push({ articleId: article.id, images: parsed.images });
+                }
+
+                created += 1;
+                const etiqueta =
+                  coincidencia.matches.length > 0
+                    ? ` [local: ${coincidencia.matches.slice(0, 4).join(', ')}]`
+                    : '';
+                registrar('✓', `Nota guardada como borrador: «${parsed.title}»${etiqueta}`);
+              } catch (error) {
+                const mensaje = error instanceof Error ? error.message : 'Error desconocido';
+                failed += 1;
+                registrar('✗', `Falló «${link.title.slice(0, 70)}» (${link.url}): ${mensaje}`);
+              }
+            }
+            continue;
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          registrar('✗', `Fallback Puppeteer falló para «${mapping.externalCategoryName}»: ${msg}`);
+        }
+      }
+
       found += links.length;
       registrar('✓', `Se encontraron ${links.length} links candidatos en «${mapping.externalCategoryName}».`);
 
