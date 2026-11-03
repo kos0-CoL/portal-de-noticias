@@ -292,14 +292,29 @@ model ClassifiedImage {
 
 model Pharmacy {
   id        String   @id @default(cuid())
+  slug      String   @unique
   name      String
+  // Nombres alternativos tal como aparecen en el organigrama del Colegio
+  // ("ORIANDA", "ABELENDA II"). Sirven para mapear la importación.
+  alias     String[] @default([])
   address   String
+  zone      String?
   phone     String?
+  whatsapp  String?
+  email     String?
+  latitude  Float?
+  longitude Float?
+  notes     String?
+  position  Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  // @default(now()) además de @updatedAt: permite agregar la columna a una
+  // tabla que ya tiene filas sin tener que vaciarla.
+  updatedAt DateTime @updatedAt @default(now())
 
   shifts PharmacyShift[]
 
+  @@index([isActive, position])
   @@map("pharmacies")
 }
 

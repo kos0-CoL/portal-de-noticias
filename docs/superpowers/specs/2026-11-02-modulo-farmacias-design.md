@@ -169,6 +169,7 @@ orquestan.
 
 ```
 src/lib/pharmacy/
+  ├─ validation.ts      ← esquemas zod, normalizarAlias(), primerSlugLibre()   (puro)
   ├─ rotation.ts        ← generarMes(), turnoDeFecha(), normalizarOrden()     (puro)
   ├─ schedule.ts        ← hoyEnSaladillo(), semanasDelMes(), turnoVigente()   (puro)
   ├─ import.ts          ← parsearPaginaColegio(html)                          (puro, recibe HTML)
@@ -208,11 +209,17 @@ Se **extrae a `src/lib/pharmacy/schedule.ts`** el `hoyEnSaladillo()` duplicado e
 
 **Queda funcionando**: dar de alta, editar, activar/desactivar y ordenar farmacias desde el panel.
 
-- `prisma/schema.prisma`: campos nuevos de `Pharmacy` y el enum. Sin cambios en `PharmacyShift`
-  todavía (esa migración es de la etapa 2), para que esta etapa no dependa del deduplicado.
-- `uniqueSlug(base, excludeId?)` declarada dentro de cada ruta que la usa, igual que
-  `uniqueCategorySlug` en `src/app/api/categorias/route.ts` y `[id]/route.ts` (hoy está duplicada
-  en los dos archivos; se sigue ese mismo criterio, sin módulo nuevo).
+- `prisma/schema.prisma`: campos nuevos de `Pharmacy`. Ni `PharmacyShift` ni el enum
+  `PharmacyShiftSource` se tocan todavía (esa migración es de la etapa 2): el enum sólo tiene sentido
+  cuando existe la columna `source` que lo usa, para no dejar un tipo suelto en la base.
+- **Migración de `slug` en dos pasos**, porque la tabla ya tiene filas: primero se agrega nullable y
+  con `@unique` (`db push --accept-data-loss`, no hay duplicados posibles en `NULL`), se rellenan los
+  slugs existentes derivándolos del nombre, y recién ahí pasa a obligatorio. `updatedAt` lleva
+  `@default(now())` además de `@updatedAt` por el mismo motivo.
+- `primerSlugLibre(base, usados)` en `src/lib/pharmacy/validation.ts`: recibe los slugs ya ocupados y
+  devuelve el primero libre agregando sufijo `-2`, `-3`… Cada ruta consulta los slugs en una sola
+  query y se queda con la parte pura testeable (a diferencia de `uniqueCategorySlug`, que consulta
+  dentro del bucle).
 - `GET/POST /api/admin/farmacias` y `PATCH/DELETE /api/admin/farmacias/[id]`, con
   `requireApiSession()` y validación zod. Se crean bajo `/api/admin/` para **no tocar** el
   `GET /api/farmacias` público, que ya está documentado en el README y consumen terceros.

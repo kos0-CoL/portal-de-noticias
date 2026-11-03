@@ -371,10 +371,34 @@ async function main() {
 
   // ------------------------------------------------------- farmacias de turno
   const farmacias = [
-    { name: 'Farmacia Del Pueblo', address: 'Av. San Martín 2345, Saladillo', phone: '2344-451234' },
-    { name: 'Farmacia Central', address: 'Belgrano 1120, Saladillo', phone: '2344-452345' },
-    { name: 'Farmacia Rivadavia', address: 'Rivadavia 890, Saladillo', phone: '2344-453456' },
-    { name: 'Farmacia Del Carril', address: 'Sarmiento 145, Del Carril', phone: '2344-454567' }
+    {
+      slug: 'farmacia-del-pueblo',
+      name: 'Farmacia Del Pueblo',
+      address: 'Av. San Martín 2345, Saladillo',
+      zone: 'Saladillo',
+      phone: '2344-451234'
+    },
+    {
+      slug: 'farmacia-central',
+      name: 'Farmacia Central',
+      address: 'Belgrano 1120, Saladillo',
+      zone: 'Saladillo',
+      phone: '2344-452345'
+    },
+    {
+      slug: 'farmacia-rivadavia',
+      name: 'Farmacia Rivadavia',
+      address: 'Rivadavia 890, Saladillo',
+      zone: 'Saladillo',
+      phone: '2344-453456'
+    },
+    {
+      slug: 'farmacia-del-carril',
+      name: 'Farmacia Del Carril',
+      address: 'Sarmiento 145, Del Carril',
+      zone: 'Del Carril',
+      phone: '2344-454567'
+    }
   ];
   const farmaciaIds: string[] = [];
   for (const f of farmacias) {
