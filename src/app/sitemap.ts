@@ -10,7 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = SITE.url.replace(/\/$/, '');
   const ahora = new Date();
 
-  const [categorias, articulos, clasificados, paginasLegales] = await Promise.all([
+  const [categorias, articulos, clasificados, paginasLegales, farmacias] = await Promise.all([
     prisma.category.findMany({
       where: { isActive: true },
       orderBy: { position: 'asc' },
@@ -29,6 +29,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       select: { id: true, updatedAt: true }
     }),
     prisma.legalPage.findMany({
+      where: { isActive: true },
+      select: { slug: true, updatedAt: true }
+    }),
+    prisma.pharmacy.findMany({
       where: { isActive: true },
       select: { slug: true, updatedAt: true }
     })
@@ -65,6 +69,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'hourly',
       priority: 0.5
     },
+    ...farmacias.map((farmacia) => ({
+      url: `${base}/farmacias/${farmacia.slug}`,
+      lastModified: farmacia.updatedAt,
+      changeFrequency: 'daily' as const,
+      priority: 0.5
+    })),
     ...categorias.map((cat) => ({
       url: `${base}/categoria/${cat.slug}`,
       lastModified: cat.updatedAt,
