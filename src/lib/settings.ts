@@ -28,7 +28,12 @@ export const SETTING_KEYS = {
   storageDefaultProvider: 'storage.defaultProvider',
   storageSupabaseUrl: 'storage.supabaseUrl',
   storageSupabaseBucket: 'storage.supabaseBucket',
-  storageSupabaseServiceKey: 'storage.supabaseServiceKey'
+  storageSupabaseServiceKey: 'storage.supabaseServiceKey',
+  pharmacyImportUrl: 'pharmacy.importUrl',
+  pharmacyRotationOrder: 'pharmacy.rotationOrder',
+  pharmacyRotationAnchorDate: 'pharmacy.rotationAnchorDate',
+  pharmacyShiftStart: 'pharmacy.shiftStart',
+  pharmacyShiftEnd: 'pharmacy.shiftEnd'
 } as const;
 
 export const SECRET_KEYS: string[] = [SETTING_KEYS.aiApiKey, SETTING_KEYS.storageSupabaseServiceKey];
@@ -71,6 +76,19 @@ export interface StorageSettings {
   hasSupabaseServiceKey: boolean;
 }
 
+export interface PharmacySettings {
+  /** Página del Colegio desde la que se importa el organigrama. */
+  importUrl: string;
+  /** Ciclo de rotación: ids de farmacia en orden, con repeticiones permitidas. */
+  rotationOrder: string[];
+  /** Fecha (YYYY-MM-DD) que corresponde al primer elemento del ciclo. */
+  rotationAnchorDate: string | null;
+  /** Hora en que empieza el turno (formato HH:mm). */
+  shiftStart: string;
+  /** Hora en que termina el turno, del día siguiente (formato HH:mm). */
+  shiftEnd: string;
+}
+
 export const DEFAULTS = {
   [SETTING_KEYS.aiProvider]: process.env.AI_PROVIDER ?? 'openai',
   [SETTING_KEYS.aiModel]: process.env.AI_MODEL ?? 'gpt-4o-mini',
@@ -102,7 +120,12 @@ export const DEFAULTS = {
   [SETTING_KEYS.storageDefaultProvider]: process.env.STORAGE_PROVIDER ?? '',
   [SETTING_KEYS.storageSupabaseUrl]: process.env.SUPABASE_URL ?? '',
   [SETTING_KEYS.storageSupabaseBucket]: process.env.SUPABASE_BUCKET ?? '',
-  [SETTING_KEYS.storageSupabaseServiceKey]: process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
+  [SETTING_KEYS.storageSupabaseServiceKey]: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+  [SETTING_KEYS.pharmacyImportUrl]: 'https://acasaladillo.com.ar/?page_id=3080',
+  [SETTING_KEYS.pharmacyRotationOrder]: [] as string[],
+  [SETTING_KEYS.pharmacyRotationAnchorDate]: '',
+  [SETTING_KEYS.pharmacyShiftStart]: '08:00',
+  [SETTING_KEYS.pharmacyShiftEnd]: '08:00'
 } as const;
 
 export const BASE_URLS: Record<AiProvider, string> = {
@@ -216,6 +239,24 @@ export async function getStorageSettings(): Promise<StorageSettings> {
 export async function getStorageSettingsForClient(): Promise<StorageSettings> {
   const s = await getStorageSettings();
   return { ...s, supabaseServiceKey: '' };
+}
+
+export async function getPharmacySettings(): Promise<PharmacySettings> {
+  const [importUrl, rotationOrder, anchor, shiftStart, shiftEnd] = await Promise.all([
+    getSetting<string>(SETTING_KEYS.pharmacyImportUrl),
+    getSetting<string[]>(SETTING_KEYS.pharmacyRotationOrder),
+    getSetting<string>(SETTING_KEYS.pharmacyRotationAnchorDate),
+    getSetting<string>(SETTING_KEYS.pharmacyShiftStart),
+    getSetting<string>(SETTING_KEYS.pharmacyShiftEnd)
+  ]);
+
+  return {
+    importUrl: (importUrl ?? '').trim(),
+    rotationOrder: Array.isArray(rotationOrder) ? rotationOrder : [],
+    rotationAnchorDate: anchor ? anchor : null,
+    shiftStart: shiftStart || '08:00',
+    shiftEnd: shiftEnd || '08:00'
+  };
 }
 
 export async function getWatermarkSettings(): Promise<WatermarkSettings> {

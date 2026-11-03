@@ -318,16 +318,27 @@ model Pharmacy {
   @@map("pharmacies")
 }
 
+/// De dónde salió el turno de ese día. Es lo que permite regenerar un mes sin
+/// pisar lo que se corrigió a mano.
+enum PharmacyShiftSource {
+  MANUAL
+  ROTACION
+  IMPORT
+}
+
 model PharmacyShift {
-  id         String   @id @default(cuid())
+  id         String              @id @default(cuid())
   pharmacyId String
-  date       DateTime @db.Date
+  date       DateTime            @db.Date
   note       String?
-  createdAt  DateTime @default(now())
+  source     PharmacyShiftSource @default(MANUAL)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt @default(now())
 
   pharmacy Pharmacy @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
 
-  @@unique([pharmacyId, date])
+  // Un solo turno por día: es la regla del Colegio (8:00 a 8:00 del día siguiente).
+  @@unique([date])
   @@index([date])
   @@map("pharmacy_shifts")
 }

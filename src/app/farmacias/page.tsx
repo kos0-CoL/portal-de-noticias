@@ -7,6 +7,7 @@ import { SiteHeader } from '@/components/public/SiteHeader';
 import { SiteFooter } from '@/components/public/SiteFooter';
 import { SectionTitle } from '@/components/public/SectionTitle';
 import { BannerZone } from '@/components/public/BannerZone';
+import { hoyEnSaladillo } from '@/lib/pharmacy/schedule';
 
 export const revalidate = 900;
 
@@ -15,18 +16,6 @@ export const metadata: Metadata = {
   description: `Farmacias de turno y listado completo de farmacias en ${SITE.city}, ${SITE.province}.`,
   alternates: { canonical: '/farmacias' }
 };
-
-/** Medianoche UTC del dia en curso en Saladillo. */
-function hoyEnSaladillo(): Date {
-  const partes = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Argentina/Buenos_Aires',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(new Date());
-  const [y, m, d] = partes.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
-}
 
 export default async function FarmaciasPage() {
   const hoy = hoyEnSaladillo();

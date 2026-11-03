@@ -1,19 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { hoyEnSaladillo } from '@/lib/pharmacy/schedule';
 
 export const revalidate = 900;
-
-/** Medianoche UTC del dia en curso en Saladillo (coincide con los campos @db.Date). */
-function hoyEnSaladillo(): Date {
-  const partes = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Argentina/Buenos_Aires',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(new Date());
-  const [y, m, d] = partes.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
-}
 
 /** Acepta ?date=YYYY-MM-DD; si falta o es invalido, usa hoy. */
 function parseFecha(input: string | null): Date {

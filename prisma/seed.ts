@@ -413,9 +413,14 @@ async function main() {
     fecha.setDate(hoy.getDate() + i);
     const pharmacyId = farmaciaIds[i % farmaciaIds.length];
     await prisma.pharmacyShift.upsert({
-      where: { pharmacyId_date: { pharmacyId, date: fecha } },
+      where: { date: fecha },
       update: {},
-      create: { pharmacyId, date: fecha, note: i % 4 === 0 ? 'Turno de 24 horas' : null }
+      create: {
+        pharmacyId,
+        date: fecha,
+        note: i % 4 === 0 ? 'Turno de 24 horas' : null,
+        source: 'ROTACION'
+      }
     });
   }
   console.log('   ✓ Farmacias de turno (14 días)');

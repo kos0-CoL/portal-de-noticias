@@ -1,18 +1,7 @@
 import Link from 'next/link';
 import { MapPin, Phone, Cross } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
-
-/** Devuelve la medianoche UTC del dia en curso en Saladillo (para @db.Date). */
-function hoyEnSaladillo(): Date {
-  const partes = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Argentina/Buenos_Aires',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(new Date());
-  const [y, m, d] = partes.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
-}
+import { hoyEnSaladillo } from '@/lib/pharmacy/schedule';
 
 /** Farmacia de turno del dia. Tarjeta destacada para la home y la cabecera. */
 export async function PharmacyWidget({ compacto = false }: { compacto?: boolean }) {
