@@ -59,7 +59,7 @@ export interface CeldaOrganigrama {
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 /** Nombre de la fuente (solo para referencia; el texto se dibuja como paths). */
-const FUENTE = 'DejaVu Sans';
+const FUENTE = 'Liberation Sans';
 
 const PALETA = {
   fondo: '#0b2545',
@@ -85,7 +85,6 @@ let fuentesCargadas = false;
  * disponibles también en serverless (Vercel). */
 async function cargarFuentes(): Promise<void> {
   if (fuentesCargadas) return;
-  fuentesCargadas = true;
   try {
     const fsMod = await import('fs/promises');
     const pathMod = await import('path');
@@ -94,11 +93,13 @@ async function cargarFuentes(): Promise<void> {
     const boldBuf = await fsMod.readFile(pathMod.join(dir, 'LiberationSans-Bold.ttf'));
     fuenteRegular = await opentype.parse(regularBuf);
     fuenteBold = await opentype.parse(boldBuf);
+    fuentesCargadas = true;
     console.warn('[organigrama] fuentes cargadas OK desde', dir);
   } catch (error) {
-    console.warn(
-      '[organigrama] no se pudieron cargar las fuentes TTF: el texto se rasterizará como <text> (dependerá de fuentes del sistema).',
-      error
+    fuentesCargadas = false;
+    console.error(
+      '[organigrama] no se pudieron cargar las fuentes TTF desde public/fonts/:',
+      error instanceof Error ? error.message : error
     );
   }
 }
