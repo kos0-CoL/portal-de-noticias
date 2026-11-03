@@ -1,18 +1,19 @@
+import opentype from 'opentype.js';
 import { isoDeFecha, parseMes, semanasDelMes } from '@/lib/pharmacy/schedule';
 
 /**
  * Armado del organigrama como imagen, sin navegador.
  *
- * Se genera un SVG y se rasteriza con sharp, que ya está en el proyecto y corre
- * en el mismo entorno que el resto del panel. Antes esto abría un Chromium con
- * Puppeteer, pero en Vercel el binario no existe en el deploy y el endpoint
- * fallaba con "Could not find Chrome".
+ * Se genera un SVG y se rasteriza con sharp. Todo el texto se convierte a
+ * <path> con opentype.js usando fuentes TTF embebidas en el proyecto, así la
+ * imagen no depende de tipografías del sistema (librsvg/Pango no respeta
+ * @font-face embebido en el SVG y en serverless no hay fuentes instaladas).
  *
- * Las fuentes se embeben en el SVG mediante @font-face (data URI base64) para
- * que no dependan de tipografías del sistema (Pango/librsvg no las encuentra
- * en serverless).
+ * Antes esto abría un Chromium con Puppeteer, pero en Vercel el binario no
+ * existe en el deploy y el endpoint fallaba con "Could not find Chrome".
  *
- * Módulo puro: no toca la base ni el sistema de archivos.
+ * Módulo puro: no toca la base ni el sistema de archivos (salvo leer las TTF
+ * una sola vez al iniciar).
  */
 
 export type FormatoImagen = 'historia' | 'post';
@@ -57,7 +58,7 @@ export interface CeldaOrganigrama {
 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-/** Nombre de la fuente embebida (se declara con @font-face en el SVG). */
+/** Nombre de la fuente (solo para referencia; el texto se dibuja como paths). */
 const FUENTE = 'DejaVu Sans';
 
 const PALETA = {
@@ -75,49 +76,60 @@ const PALETA = {
   semana: '#64748b'
 };
 
-let fuenteRegularBase64: string | null = null;
-let fuenteBoldBase64: string | null = null;
+let fuenteRegular: opentype.Font | null = null;
+let fuenteBold: opentype.Font | null = null;
 let fuentesCargadas = false;
 
-/** Lee las fuentes TTF del proyecto y las guarda como base64 (una sola vez). */
+/** Lee las fuentes TTF del proyecto y las parsea con opentype (una sola vez). */
 async function cargarFuentes(): Promise<void> {
   if (fuentesCargadas) return;
   fuentesCargadas = true;
   try {
-    const fsMod = await import('fs/promises');
     const pathMod = await import('path');
     const dir = pathMod.join(process.cwd(), 'src', 'lib', 'pharmacy', 'fonts');
-    const regularBuf = await fsMod.readFile(pathMod.join(dir, 'DejaVuSans.ttf'));
-    const boldBuf = await fsMod.readFile(pathMod.join(dir, 'DejaVuSans-Bold.ttf'));
-    fuenteRegularBase64 = regularBuf.toString('base64');
-    fuenteBoldBase64 = boldBuf.toString('base64');
+    fuenteRegular = await opentype.load(pathMod.join(dir, 'DejaVuSans.ttf'));
+    fuenteBold = await opentype.load(pathMod.join(dir, 'DejaVuSans-Bold.ttf'));
   } catch {
-    // Si no se pueden leer las fuentes (p. ej. entorno sin archivos), se usa
-    // font-family genérico y librsvg caerá a fuentes del sistema si las hay.
+    // Si no se pueden cargar las fuentes, textoAPath hará fallback a <text>.
   }
 }
 
-/** Bloque <defs><style>@font-face</style></defs> con las fuentes embebidas. */
-function defsDeFuentes(): string {
-  if (!fuenteRegularBase64 || !fuenteBoldBase64) return '';
-  return `
-    <defs>
-      <style>
-        @font-face {
-          font-family: '${FUENTE}';
-          src: url('data:font/truetype;charset=utf-8;base64,${fuenteRegularBase64}') format('truetype');
-          font-weight: 400;
-          font-style: normal;
-        }
-        @font-face {
-          font-family: '${FUENTE}';
-          src: url('data:font/truetype;charset=utf-8;base64,${fuenteBoldBase64}') format('truetype');
-          font-weight: 700;
-          font-style: normal;
-        }
-      </style>
-    </defs>
-  `;
+/** Peso de fuente usado por opentype. */
+type PesoFuente = 'regular' | 'bold';
+
+/** Ancla de alineación horizontal (equivalente a text-anchor en SVG). */
+type AnclaTexto = 'start' | 'middle' | 'end';
+
+/**
+ * Convierte una cadena de texto a un <path> SVG usando la fuente cargada.
+ * Si no hay fuente cargada (p. ej. tests sin llamar a cargarFuentes), devuelve
+ * un <text> plano como fallback.
+ */
+function textoAPath(
+  texto: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  peso: PesoFuente,
+  ancla: AnclaTexto = 'start',
+  fill: string
+): string {
+  const font = peso === 'bold' ? fuenteBold : fuenteRegular;
+  if (!font) {
+    return `<text x="${x}" y="${y}" font-family="${FUENTE}" font-size="${fontSize}" font-weight="${
+      peso === 'bold' ? '700' : '400'
+    }" fill="${fill}">${esc(texto)}</text>`;
+  }
+
+  const avance = font.getAdvanceWidth(texto, fontSize);
+  let xAjustado = x;
+  if (ancla === 'middle') xAjustado = x - avance / 2;
+  if (ancla === 'end') xAjustado = x - avance;
+
+  const path = font.getPath(texto, xAjustado, y, fontSize);
+  const d = path.toSVG(2).replace(/\s+/g, ' ').trim();
+
+  return `<path d="${d}" fill="${fill}" />`;
 }
 
 /** Escapa el texto para que sea XML válido. */
@@ -185,8 +197,7 @@ export function construirSvg(
   width: number,
   height: number,
   celdas: CeldaOrganigrama[],
-  filas: number,
-  fuenteDefs = ''
+  filas: number
 ): string {
   // El formato cuadrado (1080×1080) necesita tipografía y aire más chicos.
   const compacto = height <= 1100;
@@ -223,7 +234,6 @@ export function construirSvg(
   const celdaH = (gridH - (filas - 1) * espacio) / filas;
 
   const maxChars = Math.max(6, Math.floor((celdaW - 2 * padCelda) / (fsNombre * 0.6)));
-  const lineHeight = fsNombre;
 
   const partes: string[] = [];
 
@@ -232,22 +242,14 @@ export function construirSvg(
   // Encabezado
   const kickerBase = margen + fsKicker;
   const tituloBase = kickerBase + 12 + fsTitulo * 0.78;
-  partes.push(
-    `<text x="${margen}" y="${kickerBase}" font-family="${FUENTE}" font-size="${fsKicker}" font-weight="700" letter-spacing="3" fill="${PALETA.kicker}">${esc('FARMACIAS DE TURNO')}</text>`
-  );
-  partes.push(
-    `<text x="${margen}" y="${tituloBase}" font-family="${FUENTE}" font-size="${fsTitulo}" font-weight="700" fill="${PALETA.claro}">${esc(datos.titulo)}</text>`
-  );
+  partes.push(textoAPath('FARMACIAS DE TURNO', margen, kickerBase, fsKicker, 'bold', 'start', PALETA.kicker));
+  partes.push(textoAPath(datos.titulo, margen, tituloBase, fsTitulo, 'bold', 'start', PALETA.claro));
 
   const ladoX = width - margen;
   const urlBase = tituloBase;
   const ciudadBase = urlBase - fsLado * 1.35;
-  partes.push(
-    `<text x="${ladoX}" y="${ciudadBase}" text-anchor="end" font-family="${FUENTE}" font-size="${fsLado}" font-weight="700" fill="${PALETA.suave}">${esc(datos.ciudad)}</text>`
-  );
-  partes.push(
-    `<text x="${ladoX}" y="${urlBase}" text-anchor="end" font-family="${FUENTE}" font-size="${fsLado}" fill="${PALETA.suave}">${esc(datos.url.replace(/^https?:\/\//, ''))}</text>`
-  );
+  partes.push(textoAPath(datos.ciudad, ladoX, ciudadBase, fsLado, 'bold', 'end', PALETA.suave));
+  partes.push(textoAPath(datos.url.replace(/^https?:\/\//, ''), ladoX, urlBase, fsLado, 'regular', 'end', PALETA.suave));
 
   // Tarjeta blanca
   partes.push(
@@ -257,7 +259,7 @@ export function construirSvg(
   DIAS_SEMANA.forEach((dia, indice) => {
     const centro = gridX + indice * (celdaW + espacio) + celdaW / 2;
     partes.push(
-      `<text x="${centro}" y="${cardY + cardPad + fsSemana}" text-anchor="middle" font-family="${FUENTE}" font-size="${fsSemana}" font-weight="700" letter-spacing="1" fill="${PALETA.semana}">${esc(dia.toUpperCase())}</text>`
+      textoAPath(dia.toUpperCase(), centro, cardY + cardPad + fsSemana, fsSemana, 'bold', 'middle', PALETA.semana)
     );
   });
 
@@ -275,7 +277,15 @@ export function construirSvg(
 
     const colorDia = celda.delMes ? PALETA.tinta : PALETA.tintaTenue;
     partes.push(
-      `<text x="${x + padCelda}" y="${y + padCelda + fsDia * 0.82}" font-family="${FUENTE}" font-size="${fsDia}" font-weight="700" fill="${colorDia}">${celda.dia}</text>`
+      textoAPath(
+        String(celda.dia),
+        x + padCelda,
+        y + padCelda + fsDia * 0.82,
+        fsDia,
+        'bold',
+        'start',
+        colorDia
+      )
     );
 
     if (celda.delMes) {
@@ -284,10 +294,8 @@ export function construirSvg(
       const baseUltima = y + celdaH - padCelda - 4;
 
       lineas.forEach((linea, i) => {
-        const base = baseUltima - (lineas.length - 1 - i) * lineHeight;
-        partes.push(
-          `<text x="${x + padCelda}" y="${base}" font-family="${FUENTE}" font-size="${fsNombre}" font-weight="700" fill="${colorNombre}">${esc(linea)}</text>`
-        );
+        const base = baseUltima - (lineas.length - 1 - i) * fsNombre;
+        partes.push(textoAPath(linea, x + padCelda, base, fsNombre, 'bold', 'start', colorNombre));
       });
     }
 
@@ -296,10 +304,10 @@ export function construirSvg(
 
   const pieBase = height - margen + fsPie * 0.4;
   partes.push(
-    `<text x="${width / 2}" y="${pieBase}" text-anchor="middle" font-family="${FUENTE}" font-size="${fsPie}" fill="${PALETA.suave}">${esc(`Turnos de ${datos.horario} · ${datos.sitio}`)}</text>`
+    textoAPath(`Turnos de ${datos.horario} · ${datos.sitio}`, width / 2, pieBase, fsPie, 'regular', 'middle', PALETA.suave)
   );
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${fuenteDefs}${partes.join('')}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${partes.join('')}</svg>`;
 }
 
 /** PNG del organigrama, rasterizado con sharp. */
@@ -308,8 +316,7 @@ export async function renderOrganigramaPng(datos: DatosOrganigrama, formato: For
   const { celdas, filas } = celdasDeMes(datos.mes, datos.turnos);
 
   await cargarFuentes();
-  const fuenteDefs = defsDeFuentes();
-  const svg = construirSvg(datos, width, height, celdas, filas, fuenteDefs);
+  const svg = construirSvg(datos, width, height, celdas, filas);
 
   // Import dinámico: sharp es una dependencia opcional que se resuelve en runtime.
   const mod = (await import('sharp')) as unknown as { default?: SharpFactory };
