@@ -14,6 +14,7 @@ import {
 } from '@/lib/pharmacy/schedule';
 import PharmacyScheduleCalendar, { type DiaOrganigrama } from '@/components/admin/PharmacyScheduleCalendar';
 import RotationOrderEditor, { type FarmaciaOpcion } from '@/components/admin/RotationOrderEditor';
+import OrganigramaExportButton from '@/components/admin/OrganigramaExportButton';
 
 /**
  * /admin/farmacias/organigrama — Armado y corrección del mes de turnos.
@@ -90,6 +91,7 @@ export default async function OrganigramaPage({ searchParams }: { searchParams: 
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <OrganigramaExportButton mes={clave} />
           <Link className="btn-ghost btn-sm" href="/admin/farmacias/importar">
             <Download className="h-3.5 w-3.5" aria-hidden />
             Importar del Colegio
