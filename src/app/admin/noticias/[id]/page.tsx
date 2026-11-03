@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+import { getStorageSettingsForClient } from '@/lib/settings';
+import { LISTA_PROVEEDORES } from '@/lib/storage';
 import { ArticleEditor, ArticleHeaderActions } from '@/components/admin/ArticleEditor';
 import { PRIORITY_BADGE, StatusBadge } from '@/components/admin/StatusBadge';
 
@@ -11,13 +13,14 @@ export const metadata = {
 
 /** Editor completo de una noticia existente. */
 export default async function EditarNoticiaPage({ params }: { params: { id: string } }) {
-  const [article, categories, authors] = await Promise.all([
+  const [article, categories, authors, storage] = await Promise.all([
     prisma.article.findUnique({
       where: { id: params.id },
       include: { category: true, tags: true, images: true, scrapedItem: true }
     }),
     prisma.category.findMany({ orderBy: { position: 'asc' }, select: { id: true, name: true, slug: true } }),
-    prisma.user.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } })
+    prisma.user.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    getStorageSettingsForClient()
   ]);
 
   if (!article) notFound();
@@ -80,7 +83,14 @@ export default async function EditarNoticiaPage({ params }: { params: { id: stri
         </div>
       </div>
 
-      <ArticleEditor article={editorData} categories={categories} tags={article.tags} authors={authors} />
+      <ArticleEditor
+        article={editorData}
+        categories={categories}
+        tags={article.tags}
+        authors={authors}
+        storageProviders={LISTA_PROVEEDORES.map((p) => ({ id: p.id as string, nombre: p.nombre }))}
+        defaultStorageProvider={storage.defaultProvider}
+      />
     </div>
   );
 }

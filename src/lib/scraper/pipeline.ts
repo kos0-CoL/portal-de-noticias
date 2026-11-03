@@ -426,15 +426,25 @@ export async function runSource(sourceId: string, opts: RunSourceOptions = {}): 
       if (creadosConImagenes.length > 0) {
         // @ts-ignore — el módulo de imágenes lo implementa otro agente; si todavía no existe, el scraping sigue funcionando.
         const modImagenes = (await import('@/lib/images/process').catch(() => null)) as
-          | { replaceArticleImages?: (articleId: string, urls: string[]) => Promise<unknown[]> }
+          | { replaceArticleImages?: (articleId: string, urls: string[], proveedorId?: string | null) => Promise<unknown[]> }
           | null;
 
         if (modImagenes && typeof modImagenes.replaceArticleImages === 'function') {
           const [ai, marca] = await Promise.all([getAiSettings(), getWatermarkSettings()]);
-          if (ai.hasApiKey || marca.enabled) {
+
+          // Proveedor de almacenamiento por defecto (si hay uno configurado).
+          let proveedorId: string | null = null;
+          try {
+            const modStorage = await import('@/lib/storage').catch(() => null);
+            proveedorId = modStorage ? (await modStorage.proveedorPorDefecto())?.id ?? null : null;
+          } catch {
+            proveedorId = null;
+          }
+
+          if (ai.hasApiKey || marca.enabled || proveedorId) {
             for (const item of creadosConImagenes) {
               try {
-                await modImagenes.replaceArticleImages(item.articleId, item.images);
+                await modImagenes.replaceArticleImages(item.articleId, item.images, proveedorId);
                 registrar('✓', `Imágenes optimizadas para el artículo ${item.articleId}.`);
               } catch (error) {
                 const mensaje = error instanceof Error ? error.message : 'Error desconocido';

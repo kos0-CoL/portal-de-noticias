@@ -85,6 +85,10 @@ export interface ArticleEditorProps {
   categories: EditorCategory[];
   tags: EditorTag[];
   authors?: EditorAuthor[];
+  /** Proveedores de almacenamiento externo disponibles para alojar la portada. */
+  storageProviders?: { id: string; nombre: string }[];
+  /** Proveedor por defecto configurado en /admin/almacenamiento (vacío = ninguno). */
+  defaultStorageProvider?: string;
 }
 
 interface FormState {
@@ -200,7 +204,14 @@ function pickAi(json: unknown): AiPayload {
   };
 }
 
-export function ArticleEditor({ article, categories, tags, authors = [] }: ArticleEditorProps) {
+export function ArticleEditor({
+  article,
+  categories,
+  tags,
+  authors = [],
+  storageProviders = [],
+  defaultStorageProvider = ''
+}: ArticleEditorProps) {
   const router = useRouter();
   const [articleId, setArticleId] = useState<string | null>(article?.id ?? null);
   const [form, setForm] = useState<FormState>(() => initialForm(article));
@@ -215,6 +226,11 @@ export function ArticleEditor({ article, categories, tags, authors = [] }: Artic
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiResult, setAiResult] = useState<AiPayload | null>(null);
+
+  // Alojamiento de la portada en un proveedor externo
+  const [storageProvider, setStorageProvider] = useState(defaultStorageProvider || 'default');
+  const [alojando, setAlojando] = useState(false);
+  const [alojarError, setAlojarError] = useState<string | null>(null);
 
   // Publicación / difusión
   const [published, setPublished] = useState((article?.status ?? 'DRAFT') === 'PUBLISHED');
@@ -259,6 +275,36 @@ export function ArticleEditor({ article, categories, tags, authors = [] }: Artic
       .filter((t) => (query ? t.name.toLowerCase().includes(query) : true))
       .slice(0, 6);
   }, [tags, tagInput, form.tags]);
+
+  /**
+   * ¿La portada ya está alojada en un proveedor externo?
+   * No se puede reusar `@/lib/storage` acá: ese módulo arrastra Prisma al bundle del cliente.
+   */
+  function estaAlojada(url: string): boolean {
+    return /\.supabase\.(co|in)\/storage\/v1\/object\/public\//i.test(url);
+  }
+
+  /** Sube la portada actual al proveedor elegido y reemplaza la URL por la pública. */
+  async function alojarPortada() {
+    const origen = form.coverImage.trim();
+    if (!origen) return;
+    setAlojando(true);
+    setAlojarError(null);
+    try {
+      const res = await fetch('/api/imagenes/alojar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ origen, proveedor: storageProvider })
+      });
+      const data = (await res.json().catch(() => null)) as { ok?: boolean; url?: string; error?: string } | null;
+      if (!res.ok || !data?.ok || !data.url) throw new Error(data?.error ?? 'No se pudo alojar la imagen.');
+      update('coverImage', data.url);
+    } catch (err) {
+      setAlojarError(err instanceof Error ? err.message : 'Error inesperado al alojar la imagen.');
+    } finally {
+      setAlojando(false);
+    }
+  }
 
   function buildPayload() {
     const finalTags = [...form.tags];
@@ -597,6 +643,52 @@ export function ArticleEditor({ article, categories, tags, authors = [] }: Artic
                     className="input"
                     placeholder="Descripción de la imagen"
                   />
+
+                  <span className="label mt-3">Alojar portada en</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      className="select flex-1"
+                      value={storageProvider}
+                      onChange={(e) => setStorageProvider(e.target.value)}
+                      aria-label="Proveedor de almacenamiento"
+                    >
+                      <option value="default">
+                        Por defecto{defaultStorageProvider ? ` (${defaultStorageProvider})` : ''}
+                      </option>
+                      {storageProviders.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={alojarPortada}
+                      disabled={alojando || !form.coverImage.trim() || estaAlojada(form.coverImage)}
+                    >
+                      {alojando ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                      ) : (
+                        <Upload className="h-3.5 w-3.5" aria-hidden />
+                      )}
+                      Alojar imagen
+                    </button>
+                  </div>
+                  {estaAlojada(form.coverImage) ? (
+                    <p className="mt-1 flex items-center gap-1 text-xs font-medium text-emerald-700">
+                      <Check className="h-3.5 w-3.5" aria-hidden /> Ya está alojada en el proveedor.
+                    </p>
+                  ) : alojarError ? (
+                    <p className="mt-1 flex items-start gap-1 text-xs text-accent-600">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden /> {alojarError}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-news-500">
+                      Sube la portada (procesada y en WebP) al almacenamiento externo y reemplaza la URL. En Vercel las
+                      imágenes guardadas en el servidor no persisten.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <span className="label">Vista previa</span>

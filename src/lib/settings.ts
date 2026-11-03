@@ -24,10 +24,14 @@ export const SETTING_KEYS = {
   imageQuality: 'image.quality',
   scraperDefaults: 'scraper.defaults',
   socialAutoPublish: 'social.autoPublish',
-  siteContact: 'site.contact'
+  siteContact: 'site.contact',
+  storageDefaultProvider: 'storage.defaultProvider',
+  storageSupabaseUrl: 'storage.supabaseUrl',
+  storageSupabaseBucket: 'storage.supabaseBucket',
+  storageSupabaseServiceKey: 'storage.supabaseServiceKey'
 } as const;
 
-export const SECRET_KEYS: string[] = [SETTING_KEYS.aiApiKey];
+export const SECRET_KEYS: string[] = [SETTING_KEYS.aiApiKey, SETTING_KEYS.storageSupabaseServiceKey];
 
 export type AiProvider = 'openai' | 'openrouter' | 'groq' | 'anthropic' | 'gemini' | 'custom';
 
@@ -54,6 +58,17 @@ export interface WatermarkSettings {
   opacity: number;
   position: 'southeast' | 'southwest' | 'northeast' | 'northwest' | 'center';
   logoUrl: string | null;
+}
+
+export interface StorageSettings {
+  /** Id del proveedor por defecto; cadena vacía = no alojar. */
+  defaultProvider: string;
+  supabaseUrl: string;
+  supabaseBucket: string;
+  /** Service role key en texto plano, solo para uso interno del servidor. */
+  supabaseServiceKey: string;
+  supabaseServiceKeyMasked: string;
+  hasSupabaseServiceKey: boolean;
 }
 
 export const DEFAULTS = {
@@ -83,7 +98,11 @@ export const DEFAULTS = {
     respectRobots: true
   },
   [SETTING_KEYS.socialAutoPublish]: false,
-  [SETTING_KEYS.siteContact]: { email: 'redaccion@saladillonoticias.com.ar', phone: '' }
+  [SETTING_KEYS.siteContact]: { email: 'redaccion@saladillonoticias.com.ar', phone: '' },
+  [SETTING_KEYS.storageDefaultProvider]: process.env.STORAGE_PROVIDER ?? '',
+  [SETTING_KEYS.storageSupabaseUrl]: process.env.SUPABASE_URL ?? '',
+  [SETTING_KEYS.storageSupabaseBucket]: process.env.SUPABASE_BUCKET ?? '',
+  [SETTING_KEYS.storageSupabaseServiceKey]: process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
 } as const;
 
 export const BASE_URLS: Record<AiProvider, string> = {
@@ -172,6 +191,31 @@ export async function getAiSettingsForClient(): Promise<AiSettings> {
 /** Modelo a usar para extraer el cuerpo de las notas: el dedicado o, si no hay, el general. */
 export function resolveExtractModel(settings: AiSettings): string {
   return settings.extractModel.trim() || settings.model;
+}
+
+export async function getStorageSettings(): Promise<StorageSettings> {
+  const [defaultProvider, supabaseUrl, supabaseBucket, serviceKey] = await Promise.all([
+    getSetting<string>(SETTING_KEYS.storageDefaultProvider),
+    getSetting<string>(SETTING_KEYS.storageSupabaseUrl),
+    getSetting<string>(SETTING_KEYS.storageSupabaseBucket),
+    getSetting<string>(SETTING_KEYS.storageSupabaseServiceKey)
+  ]);
+
+  const key = serviceKey ?? '';
+  return {
+    defaultProvider: defaultProvider ?? '',
+    supabaseUrl: supabaseUrl ?? '',
+    supabaseBucket: supabaseBucket ?? '',
+    supabaseServiceKey: key,
+    supabaseServiceKeyMasked: key ? maskSecret(key) : '',
+    hasSupabaseServiceKey: Boolean(key)
+  };
+}
+
+/** Version segura: la service role key nunca viaja en claro al navegador. */
+export async function getStorageSettingsForClient(): Promise<StorageSettings> {
+  const s = await getStorageSettings();
+  return { ...s, supabaseServiceKey: '' };
 }
 
 export async function getWatermarkSettings(): Promise<WatermarkSettings> {

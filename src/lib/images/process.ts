@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { getSetting, getWatermarkSettings, SETTING_KEYS, type WatermarkSettings } from '@/lib/settings';
+import { getProvider } from '@/lib/storage';
+import type { StorageProvider } from '@/lib/storage/types';
 
 async function cryptoModule() {
   return import('crypto');
@@ -254,13 +256,8 @@ async function processWithSharp(
   };
 }
 
-/**
- * Descarga una imagen remota, la procesa con sharp y la guarda en /public/uploads.
- * Si sharp no esta disponible, devuelve la URL original sin procesar.
- */
-export async function processRemoteImage(src: string, opts?: ProcessImageOptions): Promise<ProcessedImage> {
-  const { maxWidth, quality, watermark } = await resolveOptions(opts);
-
+/** Descarga una imagen remota validando tipo y tamaño. */
+async function descargarImagen(src: string): Promise<Buffer> {
   const response = await fetch(src, {
     headers: {
       'User-Agent': USER_AGENT,
@@ -293,6 +290,17 @@ export async function processRemoteImage(src: string, opts?: ProcessImageOptions
   if (original.byteLength > MAX_BYTES) {
     throw new Error('La imagen supera el límite de 12 MB permitido.');
   }
+
+  return original;
+}
+
+/**
+ * Descarga una imagen remota, la procesa con sharp y la guarda en /public/uploads.
+ * Si sharp no esta disponible, devuelve la URL original sin procesar.
+ */
+export async function processRemoteImage(src: string, opts?: ProcessImageOptions): Promise<ProcessedImage> {
+  const { maxWidth, quality, watermark } = await resolveOptions(opts);
+  const original = await descargarImagen(src);
 
   const sharp = await getSharp();
   if (!sharp) {
@@ -349,19 +357,111 @@ export async function processUploadedImage(buffer: Buffer, originalName: string,
   }
 }
 
+/** Tipo de contenido a declarar al subir, segun la extension del archivo. */
+function contentTypeForExt(ext: string): string {
+  const tipos: Record<string, string> = {
+    webp: 'image/webp',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    avif: 'image/avif'
+  };
+  return tipos[ext.toLowerCase()] ?? 'application/octet-stream';
+}
+
+/** Sube el buffer ya procesado a la carpeta `portadas/` del proveedor. */
+async function subirAPlataforma(buffer: Buffer, ext: string, proveedor: StorageProvider): Promise<string> {
+  const { createHash } = await cryptoModule();
+  const now = new Date();
+  const folder = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const hash = createHash('sha256').update(buffer).digest('hex').slice(0, 24);
+  const nombre = `portadas/${folder}/${hash}.${ext}`;
+  const { url } = await proveedor.subir(buffer, { nombre, contentType: contentTypeForExt(ext) });
+  return url;
+}
+
+/**
+ * Procesa un buffer con sharp (resize + marca de agua + WebP) y lo sube al
+ * proveedor de almacenamiento, devolviendo la URL publica.
+ * Si sharp falla, sube la imagen original sin procesar.
+ */
+export async function processImageToProvider(
+  input: Buffer,
+  ext: string,
+  proveedor: StorageProvider,
+  opts?: ProcessImageOptions
+): Promise<ProcessedImage> {
+  const { maxWidth, quality, watermark } = await resolveOptions(opts);
+
+  const sharp = await getSharp();
+  if (!sharp) {
+    const url = await subirAPlataforma(input, ext, proveedor);
+    return { url, originalUrl: '', width: 0, height: 0, bytes: input.byteLength, format: ext };
+  }
+
+  try {
+    const processed = await processWithSharp(sharp, input, maxWidth, quality, watermark);
+    const url = await subirAPlataforma(processed.buffer, 'webp', proveedor);
+    return {
+      url,
+      originalUrl: '',
+      width: processed.width,
+      height: processed.height,
+      bytes: processed.buffer.byteLength,
+      format: 'webp'
+    };
+  } catch (error) {
+    console.warn('[imágenes] Falló el procesamiento con sharp; se sube la imagen original.', error);
+    const url = await subirAPlataforma(input, ext, proveedor);
+    return { url, originalUrl: '', width: 0, height: 0, bytes: input.byteLength, format: ext };
+  }
+}
+
+/** Descarga una imagen remota, la procesa con sharp y la sube al proveedor. */
+export async function processRemoteImageToProvider(
+  src: string,
+  proveedor: StorageProvider,
+  opts?: ProcessImageOptions
+): Promise<ProcessedImage> {
+  const original = await descargarImagen(src);
+  const resultado = await processImageToProvider(original, 'webp', proveedor, opts);
+  return { ...resultado, originalUrl: src };
+}
+
 /**
  * Procesa en serie las imagenes de una nota traida por el scraper, aplica la
  * marca de agua configurada y guarda los registros ArticleImage.
+ * Cuando se pasa `proveedorId`, la portada (index 0) se aloja en ese proveedor
+ * y, si la subida falla, se cae al almacenamiento local sin perder la nota.
  * Cada imagen se maneja de forma aislada: si falla, se saltea sin abortar.
  */
-export async function replaceArticleImages(articleId: string, remoteUrls: string[]): Promise<ProcessedImage[]> {
+export async function replaceArticleImages(
+  articleId: string,
+  remoteUrls: string[],
+  proveedorId?: string | null
+): Promise<ProcessedImage[]> {
   const { watermark } = await resolveOptions();
+  const proveedor = getProvider(proveedorId);
   const procesadas: ProcessedImage[] = [];
 
   for (let index = 0; index < remoteUrls.length; index++) {
     const remoteUrl = remoteUrls[index];
     try {
-      const processed = await processRemoteImage(remoteUrl, { watermark });
+      let processed: ProcessedImage;
+      if (index === 0 && proveedor) {
+        try {
+          processed = await processRemoteImageToProvider(remoteUrl, proveedor, { watermark });
+        } catch (error) {
+          console.warn(
+            `[imágenes] No se pudo alojar la portada en ${proveedor.id}; se usa el almacenamiento local.`,
+            error
+          );
+          processed = await processRemoteImage(remoteUrl, { watermark });
+        }
+      } else {
+        processed = await processRemoteImage(remoteUrl, { watermark });
+      }
       procesadas.push(processed);
 
       await prisma.articleImage.create({

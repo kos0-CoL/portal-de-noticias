@@ -7,6 +7,7 @@ import {
   Bot,
   FilePlus2,
   FolderTree,
+  HardDrive,
   Image as ImageIcon,
   LayoutDashboard,
   Megaphone,
@@ -50,6 +51,7 @@ const NAV_ITEMS: { href: string; label: string; icon: typeof LayoutDashboard }[]
   { href: '/admin/clasificados', label: 'Clasificados', icon: Megaphone },
   { href: '/admin/scraping', label: 'Scraping', icon: Bot },
   { href: '/admin/ia', label: 'Configuración de IA', icon: Sparkles },
+  { href: '/admin/almacenamiento', label: 'Almacenamiento', icon: HardDrive },
   { href: '/admin/banners', label: 'Banners / Monetización', icon: ImageIcon },
   { href: '/admin/difusion', label: 'Difusión en redes', icon: Share2 },
   { href: '/admin/seo', label: 'SEO y Legales', icon: Search }
@@ -63,6 +65,7 @@ const SECTION_TITLES: { match: (pathname: string) => boolean; title: string }[] 
   { match: (p) => p.startsWith('/admin/clasificados'), title: 'Clasificados' },
   { match: (p) => p.startsWith('/admin/scraping'), title: 'Scraping' },
   { match: (p) => p.startsWith('/admin/ia'), title: 'Configuración de IA' },
+  { match: (p) => p.startsWith('/admin/almacenamiento'), title: 'Almacenamiento de imágenes' },
   { match: (p) => p.startsWith('/admin/banners'), title: 'Banners / Monetización' },
   { match: (p) => p.startsWith('/admin/difusion'), title: 'Difusión en redes' },
   { match: (p) => p.startsWith('/admin/seo'), title: 'SEO y Legales' }

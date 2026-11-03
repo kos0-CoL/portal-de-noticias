@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma';
+import { getStorageSettingsForClient } from '@/lib/settings';
+import { LISTA_PROVEEDORES } from '@/lib/storage';
 import { ArticleEditor } from '@/components/admin/ArticleEditor';
 
 export const dynamic = 'force-dynamic';
@@ -22,13 +24,14 @@ function single(value: string | string[] | undefined): string | undefined {
 export default async function NuevaNoticiaPage({ searchParams }: { searchParams: SearchParams }) {
   const copyId = single(searchParams.copy);
 
-  const [categories, tags, authors, source] = await Promise.all([
+  const [categories, tags, authors, source, storage] = await Promise.all([
     prisma.category.findMany({ orderBy: { position: 'asc' }, select: { id: true, name: true, slug: true } }),
     prisma.tag.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true, slug: true } }),
     prisma.user.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
     copyId
       ? prisma.article.findUnique({ where: { id: copyId }, include: { tags: true } })
-      : Promise.resolve(null)
+      : Promise.resolve(null),
+    getStorageSettingsForClient()
   ]);
 
   const article = source
@@ -73,7 +76,14 @@ export default async function NuevaNoticiaPage({ searchParams }: { searchParams:
         </p>
       </div>
 
-      <ArticleEditor article={article} categories={categories} tags={tags} authors={authors} />
+      <ArticleEditor
+        article={article}
+        categories={categories}
+        tags={tags}
+        authors={authors}
+        storageProviders={LISTA_PROVEEDORES.map((p) => ({ id: p.id as string, nombre: p.nombre }))}
+        defaultStorageProvider={storage.defaultProvider}
+      />
     </div>
   );
 }
