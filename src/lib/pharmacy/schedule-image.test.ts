@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { celdasDeMes, FORMATOS_IMAGEN, renderOrganigramaHtml, type DatosOrganigrama } from './schedule-image';
+import {
+  celdasDeMes,
+  construirSvg,
+  FORMATOS_IMAGEN,
+  partirNombre,
+  renderOrganigramaPng,
+  type DatosOrganigrama
+} from './schedule-image';
 
 const datos: DatosOrganigrama = {
   mes: '2026-10',
@@ -10,48 +17,72 @@ const datos: DatosOrganigrama = {
   horario: '08:00 a 08:00 del día siguiente',
   turnos: [
     { fecha: '2026-10-01', pharmacyName: 'Orianda' },
-    { fecha: '2026-10-02', pharmacyName: 'Marcos' }
+    { fecha: '2026-10-02', pharmacyName: 'Juan Martin' }
   ]
 };
 
-/** Cada día del mes se marca con un data-dia; los vecinos no. */
-function diasDelMes(html: string): number {
-  return (html.match(/data-dia="/g) ?? []).length;
+function svgDe(mes: string, formato: 'historia' | 'post' = 'historia'): string {
+  const { width, height } = FORMATOS_IMAGEN[formato];
+  const { celdas, filas } = celdasDeMes(mes, datos.turnos);
+  return construirSvg({ ...datos, mes }, width, height, celdas, filas);
 }
 
-describe('renderOrganigramaHtml', () => {
-  it('incluye los 31 días del mes pedido', async () => {
-    const { html } = await renderOrganigramaHtml(datos, 'historia');
-    expect(diasDelMes(html)).toBe(31);
+describe('construirSvg', () => {
+  it('declara las dimensiones del formato', () => {
+    expect(svgDe('2026-10', 'historia')).toContain('width="1080" height="1350"');
+    expect(svgDe('2026-10', 'post')).toContain('width="1080" height="1080"');
   });
 
-  it('respeta un mes corto', async () => {
-    const { html } = await renderOrganigramaHtml({ ...datos, mes: '2026-02', titulo: 'Febrero de 2026' }, 'post');
-    expect(diasDelMes(html)).toBe(28);
+  it('incluye una celda por día de cada semana del mes', () => {
+    const { celdas, filas } = celdasDeMes('2026-10', []);
+    const svg = svgDe('2026-10');
+    expect(celdas.length).toBe(filas * 7);
+    expect((svg.match(/id="celda-/g) ?? [])).toHaveLength(celdas.length);
   });
 
-  it('usa el título del mes', async () => {
-    const { html } = await renderOrganigramaHtml(datos, 'historia');
-    expect(html).toContain('Octubre de 2026');
+  it('muestra el título y las farmacias del mes', () => {
+    const svg = svgDe('2026-10');
+    expect(svg).toContain('Octubre de 2026');
+    expect(svg).toContain('ORIANDA');
   });
 
-  it('muestra la farmacia asignada a cada día', async () => {
-    const { html } = await renderOrganigramaHtml(datos, 'historia');
-    expect(html).toContain('Orianda');
-    expect(html).toContain('Marcos');
+  it('envuelve los nombres de dos palabras en dos líneas', () => {
+    const svg = svgDe('2026-10');
+    expect(svg).toContain('JUAN');
+    expect(svg).toContain('MARTIN');
   });
 
-  it('devuelve las dimensiones de cada formato', async () => {
-    expect(FORMATOS_IMAGEN).toEqual({
-      historia: { width: 1080, height: 1350 },
-      post: { width: 1080, height: 1080 }
-    });
-    await expect(renderOrganigramaHtml(datos, 'historia')).resolves.toMatchObject({ width: 1080, height: 1350 });
-    await expect(renderOrganigramaHtml(datos, 'post')).resolves.toMatchObject({ width: 1080, height: 1080 });
+  it('no deja texto sin escapar', () => {
+    const { width, height } = FORMATOS_IMAGEN.post;
+    const { celdas, filas } = celdasDeMes('2026-10', []);
+    const svg = construirSvg(
+      { ...datos, mes: '2026-10', ciudad: 'Saladillo & Cía <zona>' },
+      width,
+      height,
+      celdas,
+      filas
+    );
+    expect(svg).toContain('Saladillo &amp; Cía &lt;zona&gt;');
   });
 
-  it('falla con un mes inválido', async () => {
-    await expect(renderOrganigramaHtml({ ...datos, mes: '2026-13' }, 'post')).rejects.toThrow();
+  it('falla con un mes inválido', () => {
+    expect(() => celdasDeMes('2026-13', [])).toThrow();
+  });
+});
+
+describe('partirNombre', () => {
+  it('deja el nombre en una línea si entra', () => {
+    expect(partirNombre('Orianda', 12)).toEqual(['ORIANDA']);
+  });
+
+  it('corta en dos líneas por palabra', () => {
+    expect(partirNombre('Juan Martin', 8)).toEqual(['JUAN', 'MARTIN']);
+  });
+
+  it('trunca con puntos suspensivos si sobra texto', () => {
+    const lineas = partirNombre('Farmacia Del Pueblo Norte', 10, 2);
+    expect(lineas).toHaveLength(2);
+    expect(lineas[1].endsWith('…')).toBe(true);
   });
 });
 
@@ -68,4 +99,18 @@ describe('celdasDeMes', () => {
     expect(conTurno).toHaveLength(1);
     expect(conTurno[0].dia).toBe(5);
   });
+});
+
+describe('renderOrganigramaPng', () => {
+  it('genera un PNG con las dimensiones exactas de cada formato', async () => {
+    for (const formato of ['historia', 'post'] as const) {
+      const png = await renderOrganigramaPng(datos, formato);
+      const { width, height } = FORMATOS_IMAGEN[formato];
+
+      expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+      expect(png.readUInt32BE(16)).toBe(width);
+      expect(png.readUInt32BE(20)).toBe(height);
+      expect(png.byteLength).toBeGreaterThan(2000);
+    }
+  }, 30_000);
 });

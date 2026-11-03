@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { requireApiSession, pharmacyShift, proveedorPorDefecto, renderScreenshot, getPharmacySettings } = vi.hoisted(() => ({
+const { requireApiSession, pharmacyShift, proveedorPorDefecto, getPharmacySettings } = vi.hoisted(() => ({
   requireApiSession: vi.fn(async () => ({ id: 'u1' })),
   pharmacyShift: { findMany: vi.fn() },
   proveedorPorDefecto: vi.fn(),
-  renderScreenshot: vi.fn(),
   getPharmacySettings: vi.fn(async () => ({
     rotationOrder: [] as string[],
     rotationAnchorDate: null as string | null,
@@ -19,9 +18,14 @@ vi.mock('@/lib/auth', () => ({
 }));
 vi.mock('@/lib/prisma', () => ({ prisma: { pharmacyShift } }));
 vi.mock('@/lib/storage', () => ({ proveedorPorDefecto }));
-vi.mock('@/lib/scraper/screenshot', () => ({ renderScreenshot }));
 vi.mock('@/lib/settings', () => ({ getPharmacySettings }));
+// Se usa la implementación real (sharp); el spy sólo permite forzar un fallo.
+vi.mock('@/lib/pharmacy/schedule-image', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/pharmacy/schedule-image')>();
+  return { ...actual, renderOrganigramaPng: vi.fn(actual.renderOrganigramaPng) };
+});
 
+import { renderOrganigramaPng } from '@/lib/pharmacy/schedule-image';
 import { POST } from './route';
 
 /** Tres días cargados de octubre de 2026. */
@@ -55,7 +59,6 @@ beforeEach(() => {
   requireApiSession.mockResolvedValue({ id: 'u1' });
   pharmacyShift.findMany.mockResolvedValue(turnosDePrueba());
   proveedorPorDefecto.mockResolvedValue(null);
-  renderScreenshot.mockResolvedValue(Buffer.from('png-falso'));
 });
 
 describe('POST /api/admin/farmacias/organigrama/imagen', () => {
@@ -65,7 +68,6 @@ describe('POST /api/admin/farmacias/organigrama/imagen', () => {
     const res = await pedir({ mes: '2026-10', formato: 'historia' });
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toMatchObject({ ok: false, error: expect.stringContaining('No hay turnos cargados') });
-    expect(renderScreenshot).not.toHaveBeenCalled();
   });
 
   it('rechaza un mes inválido', async () => {
@@ -77,15 +79,12 @@ describe('POST /api/admin/farmacias/organigrama/imagen', () => {
   it('rechaza un formato desconocido', async () => {
     const res = await pedir({ mes: '2026-10', formato: 'cuadrado' });
     expect(res.status).toBe(400);
-    expect(renderScreenshot).not.toHaveBeenCalled();
+    expect(renderOrganigramaPng).not.toHaveBeenCalled();
   });
 
-  it('renderiza con las dimensiones del formato pedido', async () => {
-    await pedir({ mes: '2026-10', formato: 'post' });
-
-    expect(renderScreenshot).toHaveBeenCalledTimes(1);
-    const [, opciones] = renderScreenshot.mock.calls[0];
-    expect(opciones).toEqual({ width: 1080, height: 1080 });
+  it('informa las dimensiones del formato pedido', async () => {
+    const res = await pedir({ mes: '2026-10', formato: 'post' });
+    await expect(res.json()).resolves.toMatchObject({ width: 1080, height: 1080 });
   });
 
   it('sube el PNG y devuelve la URL cuando hay proveedor', async () => {
@@ -101,23 +100,26 @@ describe('POST /api/admin/farmacias/organigrama/imagen', () => {
     });
   });
 
-  it('devuelve base64 para descargar si no hay proveedor configurado', async () => {
+  it('devuelve un PNG válido en base64 si no hay proveedor configurado', async () => {
     const res = await pedir({ mes: '2026-10', formato: 'post' });
     expect(res.status).toBe(200);
 
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.url).toBeNull();
-    expect(typeof body.base64).toBe('string');
-    expect(Buffer.from(body.base64, 'base64').toString()).toBe('png-falso');
+
+    const png = Buffer.from(body.base64, 'base64');
+    expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect(png.readUInt32BE(16)).toBe(1080);
+    expect(png.readUInt32BE(20)).toBe(1080);
   });
 
-  it('devuelve 502 si falla la captura', async () => {
-    renderScreenshot.mockRejectedValueOnce(new Error('No se pudo generar la imagen: sin Chrome'));
+  it('devuelve 502 si falla la generación', async () => {
+    vi.mocked(renderOrganigramaPng).mockRejectedValueOnce(new Error('sharp no está disponible'));
 
     const res = await pedir({ mes: '2026-10', formato: 'historia' });
     expect(res.status).toBe(502);
-    await expect(res.json()).resolves.toMatchObject({ ok: false });
+    await expect(res.json()).resolves.toMatchObject({ ok: false, error: 'sharp no está disponible' });
   });
 
   it('devuelve el PNG igual si la subida falla', async () => {

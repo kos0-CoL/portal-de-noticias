@@ -4,23 +4,21 @@ import { prisma } from '@/lib/prisma';
 import { UnauthorizedError, requireApiSession } from '@/lib/auth';
 import { getPharmacySettings } from '@/lib/settings';
 import { proveedorPorDefecto } from '@/lib/storage';
-import { renderScreenshot } from '@/lib/scraper/screenshot';
-import { renderOrganigramaHtml, type DatosOrganigrama, type FormatoImagen } from '@/lib/pharmacy/schedule-image';
+import { renderOrganigramaPng, FORMATOS_IMAGEN, type DatosOrganigrama, type FormatoImagen } from '@/lib/pharmacy/schedule-image';
 import { isoDeFecha, nombreDeMes, parseMes, rangoDeMes } from '@/lib/pharmacy/schedule';
 import { SITE } from '@/lib/constants';
 
 /**
  * POST /api/admin/farmacias/organigrama/imagen — genera el PNG del mes.
  *
- * El HTML se arma del lado del servidor y se le pasa a Puppeteer con
- * setContent(): el navegador nunca navega al panel.
+ * El SVG se arma del lado del servidor y se rasteriza con sharp, sin navegador:
+ * el binario de Chrome no viaja en el deploy de Vercel, así que Puppeteer no
+ * sirve para esto en producción.
  *
  * Si hay un proveedor de almacenamiento configurado, el PNG se sube y se
  * devuelve su URL. Si no, se devuelve en base64 para descarga directa, sin
  * fallar por falta de storage.
  */
-
-export const maxDuration = 60;
 
 const schema = z.object({
   mes: z.string().trim().regex(/^\d{4}-\d{2}$/, 'Mes inválido'),
@@ -82,11 +80,13 @@ export async function POST(request: Request) {
   };
 
   const formato: FormatoImagen = parsed.data.formato;
-  const { html, width, height } = await renderOrganigramaHtml(datos, formato);
 
   let png: Buffer;
+  let width: number;
+  let height: number;
   try {
-    png = await renderScreenshot(html, { width, height });
+    png = await renderOrganigramaPng(datos, formato);
+    ({ width, height } = FORMATOS_IMAGEN[formato]);
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : 'error desconocido';
     return NextResponse.json({ ok: false, error: mensaje }, { status: 502 });

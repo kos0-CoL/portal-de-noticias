@@ -1,12 +1,14 @@
-import { createElement } from 'react';
-import { OrganigramaPrint, type CeldaOrganigrama } from '@/components/admin/OrganigramaPrint';
 import { isoDeFecha, parseMes, semanasDelMes } from '@/lib/pharmacy/schedule';
 
 /**
- * Armado del HTML del organigrama para capturarlo con Puppeteer.
+ * Armado del organigrama como imagen, sin navegador.
  *
- * Módulo puro y testeable: no toca la base ni el navegador. Devuelve el HTML ya
- * renderizado (no un componente) porque el que lo consume usa setContent().
+ * Se genera un SVG y se rasteriza con sharp, que ya está en el proyecto y corre
+ * en el mismo entorno que el resto del panel. Antes esto abría un Chromium con
+ * Puppeteer, pero en Vercel el binario no existe en el deploy y el endpoint
+ * fallaba con "Could not find Chrome".
+ *
+ * Módulo puro: no toca la base ni el sistema de archivos.
  */
 
 export type FormatoImagen = 'historia' | 'post';
@@ -20,8 +22,6 @@ export const FORMATOS_IMAGEN: Record<FormatoImagen, DimensionesImagen> = {
   historia: { width: 1080, height: 1350 },
   post: { width: 1080, height: 1080 }
 };
-
-export const FORMATOS_VALIDOS: FormatoImagen[] = ['historia', 'post'];
 
 export interface TurnoMes {
   /** "YYYY-MM-DD". */
@@ -42,16 +42,74 @@ export interface DatosOrganigrama {
   turnos: TurnoMes[];
 }
 
-export interface OrganigramaImagen {
-  html: string;
-  width: number;
-  height: number;
+export interface CeldaOrganigrama {
+  /** "YYYY-MM-DD". */
+  fecha: string;
+  dia: number;
+  /** false para los días de los meses vecinos que completan la semana. */
+  delMes: boolean;
+  pharmacyName: string | null;
+}
+
+const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+/** Familias presentes en Linux, que es donde se rasteriza en producción. */
+const FUENTE = 'DejaVu Sans, Liberation Sans, Helvetica, Arial, sans-serif';
+
+const PALETA = {
+  fondo: '#0b2545',
+  kicker: '#7fb3ff',
+  claro: '#ffffff',
+  suave: '#cbd9ea',
+  tarjeta: '#ffffff',
+  celdaDentro: '#f8fafc',
+  celdaDentroBorde: '#e2e8f0',
+  celdaFuera: '#ffffff',
+  celdaFueraBorde: '#f1f5f9',
+  tinta: '#0b2545',
+  tintaTenue: '#cbd5e1',
+  semana: '#64748b'
+};
+
+/** Escapa el texto para que sea XML válido. */
+function esc(texto: string): string {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
 
 /**
- * Grilla completa de la semana que contiene al mes: incluye los días vecinos
- * que hacen falta para que sea rectangular, marcados con `delMes: false`.
+ * Corta el nombre en líneas. El SVG no sabe envolver texto solo, así que se
+ * mide por cantidad de caracteres según el ancho disponible.
  */
+export function partirNombre(nombre: string, maxChars: number, maxLineas = 2): string[] {
+  const palabras = nombre.toUpperCase().split(/\s+/).filter(Boolean);
+  const lineas: string[] = [];
+  let actual = '';
+
+  for (const palabra of palabras) {
+    const candidato = actual ? `${actual} ${palabra}` : palabra;
+    if (!actual || candidato.length <= maxChars) {
+      actual = candidato;
+    } else {
+      lineas.push(actual);
+      actual = palabra;
+    }
+  }
+  if (actual) lineas.push(actual);
+
+  if (lineas.length <= maxLineas) return lineas;
+
+  const recortadas = lineas.slice(0, maxLineas);
+  const ultima = recortadas[maxLineas - 1];
+  recortadas[maxLineas - 1] = `${ultima.slice(0, Math.max(1, maxChars - 1))}…`;
+  return recortadas;
+}
+
+/** Grilla completa de las semanas del mes, con los días vecinos incluidos. */
 export function celdasDeMes(mes: string, turnos: TurnoMes[]): { celdas: CeldaOrganigrama[]; filas: number } {
   const parsed = parseMes(mes);
   if (!parsed) throw new Error(`Mes inválido: ${mes}`);
@@ -72,31 +130,140 @@ export function celdasDeMes(mes: string, turnos: TurnoMes[]): { celdas: CeldaOrg
   return { celdas, filas: semanas.length };
 }
 
-/** HTML autocontenido del organigrama, con las dimensiones del formato pedido. */
-export async function renderOrganigramaHtml(datos: DatosOrganigrama, formato: FormatoImagen): Promise<OrganigramaImagen> {
-  const { width, height } = FORMATOS_IMAGEN[formato];
-  const { celdas, filas } = celdasDeMes(datos.mes, datos.turnos);
+/** SVG del organigrama, del tamaño exacto del formato. */
+export function construirSvg(datos: DatosOrganigrama, width: number, height: number, celdas: CeldaOrganigrama[], filas: number): string {
+  // El formato cuadrado (1080×1080) necesita tipografía y aire más chicos.
+  const compacto = height <= 1100;
 
-  // Import dinámico a propósito: Next bloquea `react-dom/server` en el grafo
-  // del servidor si aparece como import estático.
-  const { renderToStaticMarkup } = await import('react-dom/server');
+  const margen = compacto ? 44 : 56;
+  const espacio = 8;
+  const radioCelda = 12;
+  const padCelda = compacto ? 8 : 10;
 
-  const markup = renderToStaticMarkup(
-    createElement(OrganigramaPrint, {
-      mes: datos.mes,
-      titulo: datos.titulo,
-      sitio: datos.sitio,
-      ciudad: datos.ciudad,
-      url: datos.url,
-      horario: datos.horario,
-      width,
-      height,
-      filas,
-      celdas
-    })
+  const fsKicker = compacto ? 20 : 24;
+  const fsTitulo = compacto ? 54 : 68;
+  const fsLado = compacto ? 20 : 24;
+  const fsSemana = compacto ? 16 : 18;
+  const fsDia = compacto ? 22 : 26;
+  const fsNombre = compacto ? 15 : 17;
+  const fsPie = compacto ? 18 : 22;
+
+  const headerH = compacto ? 150 : 175;
+  const footerH = compacto ? 44 : 54;
+  const cardPad = compacto ? 16 : 20;
+
+  const cardX = margen;
+  const cardW = width - 2 * margen;
+  const cardY = margen + headerH;
+  const cardH = height - margen - footerH - cardY;
+
+  const gridX = cardX + cardPad;
+  const gridW = cardW - 2 * cardPad;
+  const semanaH = compacto ? 24 : 28;
+  const gridY = cardY + cardPad + semanaH + espacio;
+  const gridH = cardY + cardH - cardPad - gridY;
+
+  const celdaW = (gridW - 6 * espacio) / 7;
+  const celdaH = (gridH - (filas - 1) * espacio) / filas;
+
+  const maxChars = Math.max(6, Math.floor((celdaW - 2 * padCelda) / (fsNombre * 0.6)));
+  const lineHeight = fsNombre;
+
+  const partes: string[] = [];
+
+  partes.push(`<rect x="0" y="0" width="${width}" height="${height}" fill="${PALETA.fondo}" />`);
+
+  // Encabezado
+  const kickerBase = margen + fsKicker;
+  const tituloBase = kickerBase + 12 + fsTitulo * 0.78;
+  partes.push(
+    `<text x="${margen}" y="${kickerBase}" font-family="${FUENTE}" font-size="${fsKicker}" font-weight="700" letter-spacing="3" fill="${PALETA.kicker}">${esc('FARMACIAS DE TURNO')}</text>`
+  );
+  partes.push(
+    `<text x="${margen}" y="${tituloBase}" font-family="${FUENTE}" font-size="${fsTitulo}" font-weight="700" fill="${PALETA.claro}">${esc(datos.titulo)}</text>`
   );
 
-  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8" /><style>html,body{margin:0;padding:0;}</style></head><body>${markup}</body></html>`;
+  const ladoX = width - margen;
+  const urlBase = tituloBase;
+  const ciudadBase = urlBase - fsLado * 1.35;
+  partes.push(
+    `<text x="${ladoX}" y="${ciudadBase}" text-anchor="end" font-family="${FUENTE}" font-size="${fsLado}" font-weight="700" fill="${PALETA.suave}">${esc(datos.ciudad)}</text>`
+  );
+  partes.push(
+    `<text x="${ladoX}" y="${urlBase}" text-anchor="end" font-family="${FUENTE}" font-size="${fsLado}" fill="${PALETA.suave}">${esc(datos.url.replace(/^https?:\/\//, ''))}</text>`
+  );
 
-  return { html, width, height };
+  // Tarjeta blanca
+  partes.push(
+    `<rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardH}" rx="24" fill="${PALETA.tarjeta}" />`
+  );
+
+  DIAS_SEMANA.forEach((dia, indice) => {
+    const centro = gridX + indice * (celdaW + espacio) + celdaW / 2;
+    partes.push(
+      `<text x="${centro}" y="${cardY + cardPad + fsSemana}" text-anchor="middle" font-family="${FUENTE}" font-size="${fsSemana}" font-weight="700" letter-spacing="1" fill="${PALETA.semana}">${esc(dia.toUpperCase())}</text>`
+    );
+  });
+
+  celdas.forEach((celda, indice) => {
+    const columna = indice % 7;
+    const fila = Math.floor(indice / 7);
+    const x = gridX + columna * (celdaW + espacio);
+    const y = gridY + fila * (celdaH + espacio);
+
+    const relleno = celda.delMes ? PALETA.celdaDentro : PALETA.celdaFuera;
+    const borde = celda.delMes ? PALETA.celdaDentroBorde : PALETA.celdaFueraBorde;
+    partes.push(
+      `<g id="celda-${celda.fecha}"><rect x="${x}" y="${y}" width="${celdaW}" height="${celdaH}" rx="${radioCelda}" fill="${relleno}" stroke="${borde}" />`
+    );
+
+    const colorDia = celda.delMes ? PALETA.tinta : PALETA.tintaTenue;
+    partes.push(
+      `<text x="${x + padCelda}" y="${y + padCelda + fsDia * 0.82}" font-family="${FUENTE}" font-size="${fsDia}" font-weight="700" fill="${colorDia}">${celda.dia}</text>`
+    );
+
+    if (celda.delMes) {
+      const lineas = partirNombre(celda.pharmacyName ?? '—', maxChars);
+      const colorNombre = celda.pharmacyName ? PALETA.tinta : PALETA.tintaTenue;
+      const baseUltima = y + celdaH - padCelda - 4;
+
+      lineas.forEach((linea, i) => {
+        const base = baseUltima - (lineas.length - 1 - i) * lineHeight;
+        partes.push(
+          `<text x="${x + padCelda}" y="${base}" font-family="${FUENTE}" font-size="${fsNombre}" font-weight="700" fill="${colorNombre}">${esc(linea)}</text>`
+        );
+      });
+    }
+
+    partes.push('</g>');
+  });
+
+  const pieBase = height - margen + fsPie * 0.4;
+  partes.push(
+    `<text x="${width / 2}" y="${pieBase}" text-anchor="middle" font-family="${FUENTE}" font-size="${fsPie}" fill="${PALETA.suave}">${esc(`Turnos de ${datos.horario} · ${datos.sitio}`)}</text>`
+  );
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${partes.join('')}</svg>`;
+}
+
+/** PNG del organigrama, rasterizado con sharp. */
+export async function renderOrganigramaPng(datos: DatosOrganigrama, formato: FormatoImagen): Promise<Buffer> {
+  const { width, height } = FORMATOS_IMAGEN[formato];
+  const { celdas, filas } = celdasDeMes(datos.mes, datos.turnos);
+  const svg = construirSvg(datos, width, height, celdas, filas);
+
+  // Import dinámico: sharp es una dependencia opcional que se resuelve en runtime.
+  const mod = (await import('sharp')) as unknown as { default?: SharpFactory };
+  const sharp = mod.default ?? (mod as unknown as SharpFactory);
+  if (typeof sharp !== 'function') {
+    throw new Error('sharp no está disponible: no se puede generar la imagen.');
+  }
+
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+interface SharpFactory {
+  (input: Buffer): {
+    png(): { toBuffer(): Promise<Buffer> };
+  };
 }
