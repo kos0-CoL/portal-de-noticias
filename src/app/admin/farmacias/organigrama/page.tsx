@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Download } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import { getPharmacySettings } from '@/lib/settings';
 import {
@@ -89,10 +89,16 @@ export default async function OrganigramaPage({ searchParams }: { searchParams: 
             quedan marcados y no se pisan al volver a generar.
           </p>
         </div>
-        <Link className="btn-ghost btn-sm" href="/admin/farmacias">
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          Farmacias
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link className="btn-ghost btn-sm" href="/admin/farmacias/importar">
+            <Download className="h-3.5 w-3.5" aria-hidden />
+            Importar del Colegio
+          </Link>
+          <Link className="btn-ghost btn-sm" href="/admin/farmacias">
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+            Farmacias
+          </Link>
+        </div>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

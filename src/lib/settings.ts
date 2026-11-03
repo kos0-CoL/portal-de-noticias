@@ -33,7 +33,8 @@ export const SETTING_KEYS = {
   pharmacyRotationOrder: 'pharmacy.rotationOrder',
   pharmacyRotationAnchorDate: 'pharmacy.rotationAnchorDate',
   pharmacyShiftStart: 'pharmacy.shiftStart',
-  pharmacyShiftEnd: 'pharmacy.shiftEnd'
+  pharmacyShiftEnd: 'pharmacy.shiftEnd',
+  pharmacyImportLog: 'pharmacy.importLog'
 } as const;
 
 export const SECRET_KEYS: string[] = [SETTING_KEYS.aiApiKey, SETTING_KEYS.storageSupabaseServiceKey];
@@ -89,6 +90,17 @@ export interface PharmacySettings {
   shiftEnd: string;
 }
 
+/**
+ * Últimas respuestas fallidas de la importación del Colegio. Sirven para
+ * diagnosticar cuando el sitio cambia de estructura, que es el modo de falla
+ * más probable de este flujo.
+ */
+export interface ImportLogEntry {
+  fecha: string;
+  url: string;
+  error: string;
+}
+
 export const DEFAULTS = {
   [SETTING_KEYS.aiProvider]: process.env.AI_PROVIDER ?? 'openai',
   [SETTING_KEYS.aiModel]: process.env.AI_MODEL ?? 'gpt-4o-mini',
@@ -125,7 +137,8 @@ export const DEFAULTS = {
   [SETTING_KEYS.pharmacyRotationOrder]: [] as string[],
   [SETTING_KEYS.pharmacyRotationAnchorDate]: '',
   [SETTING_KEYS.pharmacyShiftStart]: '08:00',
-  [SETTING_KEYS.pharmacyShiftEnd]: '08:00'
+  [SETTING_KEYS.pharmacyShiftEnd]: '08:00',
+  [SETTING_KEYS.pharmacyImportLog]: [] as ImportLogEntry[]
 } as const;
 
 export const BASE_URLS: Record<AiProvider, string> = {

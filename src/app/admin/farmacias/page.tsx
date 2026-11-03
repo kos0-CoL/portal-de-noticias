@@ -1,4 +1,5 @@
-import { Cross } from 'lucide-react';
+import Link from 'next/link';
+import { CalendarDays, Cross, Download } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import PharmacyManager, { type PharmacyDTO } from '@/components/admin/PharmacyManager';
 
@@ -54,6 +55,16 @@ export default async function AdminFarmaciasPage() {
           Cargá las farmacias de turno con sus datos de contacto, dirección y ubicación. Los alias permiten reconocerlas
           en el organigrama del Colegio de Farmacéuticos.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link className="btn-primary" href="/admin/farmacias/importar">
+            <Download className="h-4 w-4" aria-hidden />
+            Importar del Colegio
+          </Link>
+          <Link className="btn-ghost" href="/admin/farmacias/organigrama">
+            <CalendarDays className="h-4 w-4" aria-hidden />
+            Organigrama del mes
+          </Link>
+        </div>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
