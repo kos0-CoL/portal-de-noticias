@@ -99,7 +99,11 @@ async function renderWithPuppeteer(url: string, userAgent: string, timeoutMs: nu
     } finally {
       await browser.close().catch(() => undefined);
     }
-  } catch {
+  } catch (error) {
+    const mensaje = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `[scraper] render con navegador falló para ${url}: ${mensaje}. Se continuará con fetch normal (sin JS).`
+    );
     return null;
   }
 }
