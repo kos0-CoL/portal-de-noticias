@@ -8,6 +8,10 @@ import { isoDeFecha, parseMes, semanasDelMes } from '@/lib/pharmacy/schedule';
  * Puppeteer, pero en Vercel el binario no existe en el deploy y el endpoint
  * fallaba con "Could not find Chrome".
  *
+ * Las fuentes se embeben en el SVG mediante @font-face (data URI base64) para
+ * que no dependan de tipografías del sistema (Pango/librsvg no las encuentra
+ * en serverless).
+ *
  * Módulo puro: no toca la base ni el sistema de archivos.
  */
 
@@ -53,8 +57,8 @@ export interface CeldaOrganigrama {
 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-/** Familias presentes en Linux, que es donde se rasteriza en producción. */
-const FUENTE = 'DejaVu Sans, Liberation Sans, Helvetica, Arial, sans-serif';
+/** Nombre de la fuente embebida (se declara con @font-face en el SVG). */
+const FUENTE = 'DejaVu Sans';
 
 const PALETA = {
   fondo: '#0b2545',
@@ -70,6 +74,51 @@ const PALETA = {
   tintaTenue: '#cbd5e1',
   semana: '#64748b'
 };
+
+let fuenteRegularBase64: string | null = null;
+let fuenteBoldBase64: string | null = null;
+let fuentesCargadas = false;
+
+/** Lee las fuentes TTF del proyecto y las guarda como base64 (una sola vez). */
+async function cargarFuentes(): Promise<void> {
+  if (fuentesCargadas) return;
+  fuentesCargadas = true;
+  try {
+    const fsMod = await import('fs/promises');
+    const pathMod = await import('path');
+    const dir = pathMod.join(process.cwd(), 'src', 'lib', 'pharmacy', 'fonts');
+    const regularBuf = await fsMod.readFile(pathMod.join(dir, 'DejaVuSans.ttf'));
+    const boldBuf = await fsMod.readFile(pathMod.join(dir, 'DejaVuSans-Bold.ttf'));
+    fuenteRegularBase64 = regularBuf.toString('base64');
+    fuenteBoldBase64 = boldBuf.toString('base64');
+  } catch {
+    // Si no se pueden leer las fuentes (p. ej. entorno sin archivos), se usa
+    // font-family genérico y librsvg caerá a fuentes del sistema si las hay.
+  }
+}
+
+/** Bloque <defs><style>@font-face</style></defs> con las fuentes embebidas. */
+function defsDeFuentes(): string {
+  if (!fuenteRegularBase64 || !fuenteBoldBase64) return '';
+  return `
+    <defs>
+      <style>
+        @font-face {
+          font-family: '${FUENTE}';
+          src: url('data:font/truetype;charset=utf-8;base64,${fuenteRegularBase64}') format('truetype');
+          font-weight: 400;
+          font-style: normal;
+        }
+        @font-face {
+          font-family: '${FUENTE}';
+          src: url('data:font/truetype;charset=utf-8;base64,${fuenteBoldBase64}') format('truetype');
+          font-weight: 700;
+          font-style: normal;
+        }
+      </style>
+    </defs>
+  `;
+}
 
 /** Escapa el texto para que sea XML válido. */
 function esc(texto: string): string {
@@ -131,7 +180,14 @@ export function celdasDeMes(mes: string, turnos: TurnoMes[]): { celdas: CeldaOrg
 }
 
 /** SVG del organigrama, del tamaño exacto del formato. */
-export function construirSvg(datos: DatosOrganigrama, width: number, height: number, celdas: CeldaOrganigrama[], filas: number): string {
+export function construirSvg(
+  datos: DatosOrganigrama,
+  width: number,
+  height: number,
+  celdas: CeldaOrganigrama[],
+  filas: number,
+  fuenteDefs = ''
+): string {
   // El formato cuadrado (1080×1080) necesita tipografía y aire más chicos.
   const compacto = height <= 1100;
 
@@ -243,14 +299,17 @@ export function construirSvg(datos: DatosOrganigrama, width: number, height: num
     `<text x="${width / 2}" y="${pieBase}" text-anchor="middle" font-family="${FUENTE}" font-size="${fsPie}" fill="${PALETA.suave}">${esc(`Turnos de ${datos.horario} · ${datos.sitio}`)}</text>`
   );
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${partes.join('')}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${fuenteDefs}${partes.join('')}</svg>`;
 }
 
 /** PNG del organigrama, rasterizado con sharp. */
 export async function renderOrganigramaPng(datos: DatosOrganigrama, formato: FormatoImagen): Promise<Buffer> {
   const { width, height } = FORMATOS_IMAGEN[formato];
   const { celdas, filas } = celdasDeMes(datos.mes, datos.turnos);
-  const svg = construirSvg(datos, width, height, celdas, filas);
+
+  await cargarFuentes();
+  const fuenteDefs = defsDeFuentes();
+  const svg = construirSvg(datos, width, height, celdas, filas, fuenteDefs);
 
   // Import dinámico: sharp es una dependencia opcional que se resuelve en runtime.
   const mod = (await import('sharp')) as unknown as { default?: SharpFactory };
