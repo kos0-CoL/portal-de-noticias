@@ -80,17 +80,26 @@ let fuenteRegular: opentype.Font | null = null;
 let fuenteBold: opentype.Font | null = null;
 let fuentesCargadas = false;
 
-/** Lee las fuentes TTF del proyecto y las parsea con opentype (una sola vez). */
+/** Lee las fuentes TTF del proyecto y las parsea con opentype (una sola vez).
+ * Las TTF viven en public/fonts/ para que Next.js las copie al build y estén
+ * disponibles también en serverless (Vercel). */
 async function cargarFuentes(): Promise<void> {
   if (fuentesCargadas) return;
   fuentesCargadas = true;
   try {
+    const fsMod = await import('fs/promises');
     const pathMod = await import('path');
-    const dir = pathMod.join(process.cwd(), 'src', 'lib', 'pharmacy', 'fonts');
-    fuenteRegular = await opentype.load(pathMod.join(dir, 'DejaVuSans.ttf'));
-    fuenteBold = await opentype.load(pathMod.join(dir, 'DejaVuSans-Bold.ttf'));
-  } catch {
-    // Si no se pueden cargar las fuentes, textoAPath hará fallback a <text>.
+    const dir = pathMod.join(process.cwd(), 'public', 'fonts');
+    const regularBuf = await fsMod.readFile(pathMod.join(dir, 'LiberationSans-Regular.ttf'));
+    const boldBuf = await fsMod.readFile(pathMod.join(dir, 'LiberationSans-Bold.ttf'));
+    fuenteRegular = await opentype.parse(regularBuf);
+    fuenteBold = await opentype.parse(boldBuf);
+    console.warn('[organigrama] fuentes cargadas OK desde', dir);
+  } catch (error) {
+    console.warn(
+      '[organigrama] no se pudieron cargar las fuentes TTF: el texto se rasterizará como <text> (dependerá de fuentes del sistema).',
+      error
+    );
   }
 }
 
@@ -127,7 +136,10 @@ function textoAPath(
   if (ancla === 'end') xAjustado = x - avance;
 
   const path = font.getPath(texto, xAjustado, y, fontSize);
-  const d = path.toSVG(2).replace(/\s+/g, ' ').trim();
+  // toSVG() devuelve "<path d=\"...\" />" completo; extraemos solo el d=""
+  const svgPath = path.toSVG(2).replace(/\s+/g, ' ').trim();
+  const dMatch = svgPath.match(/d="([^"]*)"/);
+  const d = dMatch ? dMatch[1] : '';
 
   return `<path d="${d}" fill="${fill}" />`;
 }
