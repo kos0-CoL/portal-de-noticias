@@ -14,6 +14,7 @@ const SECURITY_HEADERS: Record<string, string> = {
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: https:; " +
     "connect-src 'self'; " +
+    "frame-src 'self' https://www.google.com; " +
     "frame-ancestors 'self';",
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
 };

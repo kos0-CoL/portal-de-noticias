@@ -64,7 +64,7 @@ export default async function FarmaciasPage({ searchParams }: { searchParams?: {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-brand-600 bg-brand-600 text-[10px] font-bold uppercase tracking-wider text-white">
-                <Badge size="small" className="bg-brand-400 text-brand-900">De turno ahora</Badge>
+                <Badge className="bg-brand-400 text-brand-900">De turno ahora</Badge>
                 {vigente.inicio} hs
               </span>
               <h2 className="headline-md mt-2 text-brand-900">
