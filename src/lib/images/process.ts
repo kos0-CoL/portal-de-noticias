@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { getSetting, getWatermarkSettings, SETTING_KEYS, type WatermarkSettings } from '@/lib/settings';
-import { getProvider } from '@/lib/storage';
+import { getProvider, proveedorPorDefecto } from '@/lib/storage';
 import type { StorageProvider } from '@/lib/storage/types';
 
 async function cryptoModule() {
@@ -326,7 +326,9 @@ export async function processRemoteImage(src: string, opts?: ProcessImageOptions
 
 /**
  * Procesa una imagen subida a mano desde el panel.
- * En modo degradado guarda el archivo tal cual y devuelve su url.
+ * Sube al proveedor de almacenamiento (Supabase) cuando está disponible,
+ * evitando el filesystem de solo lectura de Vercel serverless.
+ * En modo degradado (sin proveedor), guarda el archivo tal cual localmente.
  */
 export async function processUploadedImage(buffer: Buffer, originalName: string, opts?: ProcessImageOptions): Promise<ProcessedImage> {
   const { maxWidth, quality, watermark } = await resolveOptions(opts);
@@ -334,27 +336,55 @@ export async function processUploadedImage(buffer: Buffer, originalName: string,
   const ext = (extname(originalName).replace('.', '') || 'bin').toLowerCase();
 
   const sharp = await getSharp();
+  let processedBuffer: Buffer;
+  let width: number;
+  let height: number;
+  let format: string;
+
   if (!sharp) {
-    const url = await saveBuffer(buffer, ext);
-    return { url, originalUrl: originalName, width: 0, height: 0, bytes: buffer.byteLength, format: ext };
+    processedBuffer = buffer;
+    width = 0;
+    height = 0;
+    format = ext;
+  } else {
+    try {
+      const result = await processWithSharp(sharp, buffer, maxWidth, quality, watermark);
+      processedBuffer = result.buffer;
+      width = result.width;
+      height = result.height;
+      format = 'webp';
+    } catch (error) {
+      console.warn('[imágenes] Falló el procesamiento de la imagen subida; se guarda el original.', error);
+      processedBuffer = buffer;
+      width = 0;
+      height = 0;
+      format = ext;
+    }
   }
 
-  try {
-    const processed = await processWithSharp(sharp, buffer, maxWidth, quality, watermark);
-    const url = await saveBuffer(processed.buffer, 'webp');
-    return {
-      url,
-      originalUrl: originalName,
-      width: processed.width,
-      height: processed.height,
-      bytes: processed.buffer.byteLength,
-      format: 'webp'
-    };
-  } catch (error) {
-    console.warn('[imágenes] Falló el procesamiento de la imagen subida; se guarda el original.', error);
-    const url = await saveBuffer(buffer, ext);
-    return { url, originalUrl: originalName, width: 0, height: 0, bytes: buffer.byteLength, format: ext };
+  // Subir al proveedor de almacenamiento (Supabase) si está configurado.
+  const proveedor = await proveedorPorDefecto();
+  if (proveedor) {
+    try {
+      const folder = new Date().toISOString().slice(0, 7); // yyyy-mm
+      const hash = (await (await import('crypto')).createHash('sha256').update(processedBuffer).digest('hex')).slice(0, 24);
+      const nombre = `portadas/${folder}/${hash}.${format === 'webp' ? 'webp' : ext}`;
+      const { url } = await proveedor.subir(processedBuffer, { nombre, contentType: contentTypeForExt(format) });
+      return {
+        url,
+        originalUrl: originalName,
+        width,
+        height,
+        bytes: processedBuffer.byteLength,
+        format
+      };
+    } catch (error) {
+      console.warn('[imágenes] Falló la subida al proveedor; se guarda localmente.', error);
+    }
   }
+
+  const url = await saveBuffer(processedBuffer, format === 'webp' ? 'webp' : ext);
+  return { url, originalUrl: originalName, width, height, bytes: processedBuffer.byteLength, format };
 }
 
 /** Tipo de contenido a declarar al subir, segun la extension del archivo. */

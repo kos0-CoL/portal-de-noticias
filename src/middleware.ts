@@ -12,7 +12,7 @@ const SECURITY_HEADERS: Record<string, string> = {
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://www.google.com; " +
     "style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data: https:; " +
+    "img-src 'self' data: https: blob:; " +
     "connect-src 'self'; " +
     "frame-src 'self' https://www.google.com; " +
     "frame-ancestors 'self';",

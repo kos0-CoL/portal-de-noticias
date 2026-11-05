@@ -53,6 +53,11 @@ function volverCon(id: string, tipo: 'ok' | 'error', mensaje: string): never {
   redirect(`/admin/clasificados/${id}?${tipo}=${encodeURIComponent(mensaje)}`);
 }
 
+/** Redirige al listado con un mensaje de resultado. */
+function volverAlListado(tipo: 'ok' | 'error', mensaje: string): never {
+  redirect(`/admin/clasificados?${tipo}=${encodeURIComponent(mensaje)}`);
+}
+
 /** Convierte el valor de un <input type="date"> a un Date de fin de día local. */
 function fechaDesdeInput(valor: string): Date {
   return new Date(`${valor}T23:59:59`);
@@ -180,4 +185,56 @@ export async function eliminarFotoClasificado(formData: FormData) {
 
   revalidar(id);
   volverCon(id, 'ok', 'Foto eliminada.');
+}
+
+/** Crea un aviso clasificado nuevo desde el panel de administración. */
+export async function crearClasificado(formData: FormData) {
+  const resultado = edicionSchema.safeParse({
+    title: texto(formData, 'title'),
+    description: texto(formData, 'description'),
+    section: texto(formData, 'section'),
+    contactName: texto(formData, 'contactName'),
+    contactPhone: texto(formData, 'contactPhone'),
+    contactEmail: texto(formData, 'contactEmail'),
+    price: texto(formData, 'price'),
+    locality: texto(formData, 'locality'),
+    estado: texto(formData, 'estado'),
+    expiresAt: texto(formData, 'expiresAt')
+  });
+
+  if (!resultado.success) {
+    volverAlListado('error', resultado.error.issues[0]?.message ?? 'Datos inválidos.');
+  }
+
+  const datos = resultado.data;
+
+  let fotos;
+  try {
+    fotos = await procesarFotosClasificado(formData.getAll('photos').filter(esArchivo));
+  } catch (error) {
+    if (error instanceof FotoInvalidaError) volverAlListado('error', error.message);
+    throw error;
+  }
+
+  const aviso = await prisma.classified.create({
+    data: {
+      title: datos.title,
+      description: datos.description,
+      section: datos.section,
+      contactName: datos.contactName,
+      contactPhone: datos.contactPhone,
+      contactEmail: datos.contactEmail ? datos.contactEmail : null,
+      price: datos.price ?? null,
+      locality: datos.locality,
+      currency: 'ARS',
+      status: datos.estado,
+      expiresAt: datos.expiresAt ? fechaDesdeInput(datos.expiresAt) : null,
+      imageUrl: fotos[0]?.url ?? null,
+      images: { create: filasDeFotos(fotos) }
+    },
+    select: { id: true }
+  });
+
+  revalidar(aviso.id);
+  volverAlListado('ok', 'Clasificado creado.');
 }

@@ -84,6 +84,12 @@ export default async function AdminClasificadosPage({ searchParams }: { searchPa
 
         <div className="flex flex-wrap gap-2">
           <Link
+            href="/admin/clasificados/nuevo"
+            className="btn-primary btn-sm"
+          >
+            Nuevo
+          </Link>
+          <Link
             href="/admin/clasificados"
             className={!estado ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
           >
