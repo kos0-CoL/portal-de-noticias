@@ -69,6 +69,7 @@ export async function BannerZone({ zone, className }: BannerZoneProps) {
   const { width, height } = MEDIDAS[zone];
 
   if (banners.length === 0) {
+    if (zone === 'HEADER') return null;
     const imagenDefault = IMAGEN_POR_DEFECTO[zone];
     if (imagenDefault) {
       return (
