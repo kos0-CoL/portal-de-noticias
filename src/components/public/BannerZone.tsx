@@ -26,6 +26,15 @@ const MEDIDAS: Record<BannerZoneId, { width: number; height: number }> = {
   MOBILE_STICKY: { width: 320, height: 50 }
 };
 
+/** Imagen por defecto que se muestra cuando no hay banner activo en la zona. */
+const IMAGEN_POR_DEFECTO: Record<Exclude<BannerZoneId, 'HEADER'>, string> = {
+  HOME_TOP: '/uploads/banners/HOME_TOP_970x90.svg',
+  INLINE_ARTICLE: '/uploads/banners/INLINE_ARTICLE_728x90.svg',
+  SIDEBAR: '/uploads/banners/SIDEBAR_300x250.svg',
+  FOOTER: '/uploads/banners/FOOTER_970x90.svg',
+  MOBILE_STICKY: '/uploads/banners/MOBILE_STICKY_320x50.svg'
+};
+
 /** Rotulo discreto de publicidad que acompaña a todas las piezas. */
 function RotuloPublicidad() {
   return <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.2em] text-news-400">Publicidad</span>;
@@ -57,9 +66,27 @@ export async function BannerZone({ zone, className }: BannerZoneProps) {
     orderBy: [{ weight: 'desc' }, { createdAt: 'desc' }]
   });
 
-  if (banners.length === 0) return null;
-
   const { width, height } = MEDIDAS[zone];
+
+  if (banners.length === 0) {
+    const imagenDefault = IMAGEN_POR_DEFECTO[zone];
+    if (imagenDefault) {
+      return (
+        <div className={cn('my-4 w-full', className)}>
+          <RotuloPublicidad />
+          <Image
+            src={imagenDefault}
+            alt="Publicite aquí"
+            width={width}
+            height={height}
+            unoptimized
+            className="h-auto w-full rounded-md object-contain"
+          />
+        </div>
+      );
+    }
+    return null;
+  }
 
   const anuncioAdsense = banners.find((b) => b.type === 'ADSENSE' && b.adSlot);
   if (anuncioAdsense) {
