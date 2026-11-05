@@ -74,12 +74,11 @@ export async function BannerZone({ zone, className }: BannerZoneProps) {
       return (
         <div className={cn('my-4 w-full', className)}>
           <RotuloPublicidad />
-          <Image
+          <img
             src={imagenDefault}
             alt="Publicite aquí"
             width={width}
             height={height}
-            unoptimized
             className="h-auto w-full rounded-md object-contain"
           />
         </div>
