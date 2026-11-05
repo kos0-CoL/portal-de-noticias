@@ -87,24 +87,19 @@ let fuentesCargadas = false;
 async function cargarFuentes(): Promise<void> {
   if (fuentesCargadas) return;
   try {
-    const base = SITE.url.replace(/\/$/, '');
-    const [regularRes, boldRes] = await Promise.all([
-      fetch(`${base}/fonts/LiberationSans-Regular.ttf`),
-      fetch(`${base}/fonts/LiberationSans-Bold.ttf`)
-    ]);
-    if (!regularRes.ok || !boldRes.ok) {
-      throw new Error(`fonts HTTP ${regularRes.status}/${boldRes.status}`);
-    }
-    const regularBuf = Buffer.from(await regularRes.arrayBuffer());
-    const boldBuf = Buffer.from(await boldRes.arrayBuffer());
+    const fsMod = await import('fs/promises');
+    const pathMod = await import('path');
+    const dir = pathMod.join(process.cwd(), 'public', 'fonts');
+    const regularBuf = await fsMod.readFile(pathMod.join(dir, 'LiberationSans-Regular.ttf'));
+    const boldBuf = await fsMod.readFile(pathMod.join(dir, 'LiberationSans-Bold.ttf'));
     fuenteRegular = await opentype.parse(regularBuf);
     fuenteBold = await opentype.parse(boldBuf);
     fuentesCargadas = true;
-    console.warn('[organigrama] fuentes cargadas OK desde', base + '/fonts/');
+    console.warn('[organigrama] fuentes cargadas OK desde', dir);
   } catch (error) {
     fuentesCargadas = false;
     console.error(
-      '[organigrama] no se pudieron cargar las fuentes TTF vía HTTP:',
+      '[organigrama] no se pudieron cargar las fuentes TTF desde public/fonts/:',
       error instanceof Error ? error.message : error
     );
   }
