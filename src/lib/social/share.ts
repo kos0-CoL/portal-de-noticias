@@ -88,7 +88,10 @@ export function buildSocialPayload(article: SocialArticleInput): SocialPayload {
 
 /** Firma HMAC-SHA256 del cuerpo, para que el receptor valide el origen. */
 function signPayload(body: string): string {
-  const secret = process.env.SESSION_SECRET ?? '';
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error('SESSION_SECRET no está definida en las variables de entorno.');
+  }
   return createHmac('sha256', secret).update(body).digest('hex');
 }
 
@@ -203,6 +206,10 @@ export async function shareArticle(articleId: string, channelIds?: string[]): Pr
 
   if (!article) {
     throw new Error('No se encontró la nota que querés difundir.');
+  }
+
+  if (article.status !== 'PUBLISHED') {
+    throw new Error('Solo se pueden difundir notas publicadas.');
   }
 
   const channels = await prisma.socialChannel.findMany({

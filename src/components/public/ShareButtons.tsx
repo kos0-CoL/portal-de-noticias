@@ -17,7 +17,7 @@ export function ShareButtons({ url, title }: ShareButtonsProps) {
 
   const redes = [
     { label: 'Compartir en Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, Icon: Facebook },
-    { label: 'Compartir en X', href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`, Icon: Twitter },
+    { label: 'Compartir en X', href: `https://x.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`, Icon: Twitter },
     { label: 'Compartir en WhatsApp', href: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`, Icon: MessageCircle },
     { label: 'Compartir en Telegram', href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`, Icon: Send }
   ];
