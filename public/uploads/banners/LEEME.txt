@@ -1,0 +1,22 @@
+SALADILLO NOTICIAS — KIT DE BANNERS PUBLICITARIOS
+
+Incluye 5 banners PNG listos para publicar, sus SVG editables y el fondo común.
+
+FORMATOS
+- HOME_TOP_970x90.png / .svg
+- INLINE_ARTICLE_728x90.png / .svg
+- SIDEBAR_300x250.png / .svg
+- FOOTER_970x90.png / .svg
+- MOBILE_STICKY_320x50.png / .svg
+
+DATOS DE CONTACTO
+WhatsApp: 2345650340
+
+MENSAJE DE CAMPAÑA
+“PUBLICITÁ AQUÍ” — “Hacé visible tu negocio en Saladillo y la región”.
+
+NOTAS
+- Los PNG tienen exactamente las dimensiones indicadas en sus nombres.
+- El número está trazado como texto vectorial para evitar errores de generación automática.
+- Los SVG son editables. Para que muestren el fondo al abrirlos, conservá news_background.png en la misma carpeta.
+- El botón de WhatsApp es visual: para hacerlo clickeable, vinculá cada espacio publicitario a https://wa.me/2345650340 desde el HTML del sitio.

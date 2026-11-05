@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="320" height="50" viewBox="0 0 320 50">
+<defs>
+  <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#04122c" stop-opacity=".92"/>
+    <stop offset=".54" stop-color="#061a39" stop-opacity=".72"/>
+    <stop offset="1" stop-color="#06152f" stop-opacity=".55"/>
+  </linearGradient>
+  <linearGradient id="vshade" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#04122c" stop-opacity=".82"/>
+    <stop offset=".56" stop-color="#061a39" stop-opacity=".5"/>
+    <stop offset="1" stop-color="#04122c" stop-opacity=".9"/>
+  </linearGradient>
+  <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#31e4e1"/><stop offset="1" stop-color="#1685ff"/>
+  </linearGradient>
+  <linearGradient id="wa" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#27d879"/><stop offset="1" stop-color="#079b60"/>
+  </linearGradient>
+  <linearGradient id="orange" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#ffbd52"/><stop offset="1" stop-color="#ff7849"/>
+  </linearGradient>
+  <filter id="softshadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5"/></filter>
+  <clipPath id="clip"><rect width="320" height="50" rx="12"/></clipPath>
+</defs>
+<g clip-path="url(#clip)">
+  <image x="0" y="0" width="320" height="50" xlink:href="news_background.png" preserveAspectRatio="xMidYMid slice"/>
+  <rect width="100%" height="100%" fill="#06152f" opacity=".58"/>
+  <path d="M0 46 H320 V50 H0 Z" fill="url(#cyan)" opacity=".92"/>
+  <path d="M0 0 H320 V2 H0 Z" fill="#20c9ed" opacity=".55"/>
+  
+  <rect x="8" y="9" width="31" height="31" rx="8" fill="url(#cyan)"/>
+  <path d="M15 17 h17 v13 h-17 z M18 21 h11 M18 25 h8" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <text x="48" y="30" font-family="Lato, Arial, sans-serif" font-size="14.2" font-weight="900" letter-spacing="-.15" fill="#ffffff">PUBLICITÁ AQUÍ</text>
+  <g>
+          <rect x="183" y="10" width="129" height="30" rx="15.0" fill="#042b25" opacity=".38" filter="url(#softshadow)"/>
+          <rect x="183" y="10" width="129" height="30" rx="15.0" fill="url(#wa)" stroke="#9dffd0" stroke-opacity=".36" stroke-width="1"/>
+          <g transform="translate(193,17.2) scale(0.65)">
+      <path d="M12.03 2.1a9.78 9.78 0 0 0-8.42 14.77L2.2 21.8l5.05-1.32a9.83 9.83 0 1 0 4.78-18.38Z" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linejoin="round"/>
+      <path d="M8.18 7.1c-.24-.53-.5-.54-.74-.55h-.63c-.22 0-.58.08-.88.41-.31.34-1.16 1.13-1.16 2.75s1.18 3.2 1.34 3.42c.16.22 2.31 3.7 5.7 5.04.8.34 1.42.54 1.9.69.8.25 1.53.21 2.11.13.65-.1 2.01-.82 2.3-1.61.28-.79.28-1.47.2-1.61-.08-.14-.3-.22-.63-.39-.33-.17-1.96-.97-2.27-1.08-.3-.11-.52-.17-.74.17-.22.33-.85 1.08-1.04 1.3-.19.22-.38.25-.71.08-.33-.17-1.4-.52-2.67-1.65-.99-.88-1.66-1.96-1.85-2.29-.19-.33-.02-.51.14-.67.15-.15.33-.39.5-.58.16-.19.22-.33.33-.55.11-.22.06-.41-.03-.58-.08-.17-.73-1.79-1-2.44Z" fill="#ffffff" transform="translate(2.5 1.3) scale(.82)"/>
+    </g>
+          <text x="215.6" y="29.08" font-family="Lato, Arial, sans-serif" font-size="12" font-weight="900" fill="#ffffff" letter-spacing=".1">2345650340</text>
+        </g>
+
+</g>
+</svg>
